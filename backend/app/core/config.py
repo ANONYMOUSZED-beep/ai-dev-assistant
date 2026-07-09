@@ -6,11 +6,12 @@ A single cached :func:`get_settings` instance is shared across the application.
 
 from __future__ import annotations
 
+import json
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import Field, computed_field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, computed_field, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 VectorStoreName = Literal["faiss", "chroma"]
 LLMProviderName = Literal["openai", "anthropic", "gemini", "deepseek", "qwen", "groq"]
@@ -32,11 +33,36 @@ class Settings(BaseSettings):
     environment: Environment = "development"
     log_level: str = "INFO"
     api_v1_prefix: str = "/api/v1"
-    backend_cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
+    # Accepts a JSON list (["https://a", "https://b"]) OR a plain/comma-separated
+    # string (https://a,https://b) — see the validator below.
+    backend_cors_origins: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["http://localhost:3000"]
+    )
 
     # ── Security ─────────────────────────────────────────────────
     # Allowed client API keys. When empty, authentication is disabled (local dev).
-    api_keys: list[str] = Field(default_factory=list)
+    # Accepts JSON list or comma-separated string, like backend_cors_origins.
+    api_keys: Annotated[list[str], NoDecode] = Field(default_factory=list)
+
+    @field_validator("backend_cors_origins", "api_keys", mode="before")
+    @classmethod
+    def _parse_str_list(cls, value: object) -> object:
+        """Parse env values that may be JSON lists, comma-separated, or a single item.
+
+        Env vars can't hold Python lists, and requiring strict JSON is a common
+        deployment foot-gun. This accepts all of: '["a","b"]', 'a,b', and 'a'.
+        """
+        if not isinstance(value, str):
+            return value
+        text = value.strip()
+        if not text:
+            return []
+        if text.startswith("["):
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError:
+                pass  # fall through to comma-splitting
+        return [item.strip() for item in text.split(",") if item.strip()]
     # Fixed-window request cap per client, per minute. 0 disables rate limiting.
     rate_limit_per_minute: int = 60
 
