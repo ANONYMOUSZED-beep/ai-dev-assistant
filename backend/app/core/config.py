@@ -26,6 +26,9 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        # Strip stray whitespace/newlines from env values — pasting secrets into
+        # dashboards (e.g. Hugging Face) often appends a trailing "\n".
+        str_strip_whitespace=True,
     )
 
     # ── Application ──────────────────────────────────────────────
