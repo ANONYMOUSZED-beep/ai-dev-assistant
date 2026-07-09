@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Env / secrets
+.env
+*.local
+
+# Logs
+*.log
+
+# Local design/source scaffolding (not part of the app)
+/turn_this_into_react_loading_a.mp4
+/rivr_recreated/
+/summa.py
+/demo.py
+/build_guide_html.py
+/LEARNING_GUIDE.*
+
+# Data / indexes
+data/
+*.faiss
+*.sqlite3
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

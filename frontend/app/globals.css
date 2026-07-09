@@ -1,0 +1,1258 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-ide-bg text-ide-text antialiased;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+}
+
+#__next {
+  height: 100%;
+}
+
+/* Custom scrollbars to match the light IDE theme. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c7ccd6;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #aab0bd;
+  background-clip: content-box;
+}
+
+/* Focus visibility for keyboard users. */
+:focus-visible {
+  outline: 2px solid #24406e;
+  outline-offset: 2px;
+}
+
+/* Markdown prose styling within chat messages. */
+.markdown-body {
+  @apply text-sm leading-relaxed text-ide-text;
+}
+
+.markdown-body p {
+  @apply my-2;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  @apply mt-4 mb-2 font-semibold text-ide-text;
+}
+
+.markdown-body h1 {
+  @apply text-lg;
+}
+
+.markdown-body h2 {
+  @apply text-base;
+}
+
+.markdown-body h3 {
+  @apply text-sm;
+}
+
+.markdown-body ul {
+  @apply my-2 list-disc pl-5;
+}
+
+.markdown-body ol {
+  @apply my-2 list-decimal pl-5;
+}
+
+.markdown-body li {
+  @apply my-1;
+}
+
+.markdown-body a {
+  @apply text-ide-accent underline underline-offset-2 hover:text-blue-400;
+}
+
+.markdown-body blockquote {
+  @apply my-2 border-l-2 border-ide-border pl-3 text-ide-muted;
+}
+
+.markdown-body code:not(pre code) {
+  @apply rounded bg-ide-elevated px-1.5 py-0.5 font-mono text-[0.8125rem] text-ide-text;
+}
+
+.markdown-body pre {
+  @apply my-3 overflow-x-auto rounded-lg border border-ide-border bg-ide-elevated p-3 font-mono text-[0.8125rem] leading-relaxed text-ide-text;
+}
+
+.markdown-body table {
+  @apply my-3 w-full border-collapse text-sm;
+}
+
+.markdown-body th,
+.markdown-body td {
+  @apply border border-ide-border px-2 py-1 text-left;
+}
+
+.markdown-body th {
+  @apply bg-ide-elevated font-semibold;
+}
+
+.markdown-body hr {
+  @apply my-4 border-ide-border;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.cursor-blink::after {
+  content: "▋";
+  @apply ml-0.5 text-ide-accent;
+  animation: blink 1s step-end infinite;
+}
+
+/* ── Landing page animations ─────────────────────────────────────── */
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes zoom-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+.animate-fade-in-up {
+  opacity: 0;
+  animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-zoom-in {
+  opacity: 0;
+  animation: zoom-in 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.anim-delay-100 {
+  animation-delay: 100ms;
+}
+.anim-delay-200 {
+  animation-delay: 200ms;
+}
+.anim-delay-300 {
+  animation-delay: 300ms;
+}
+.anim-delay-400 {
+  animation-delay: 400ms;
+}
+
+/* Static fluid gradient shown behind the WebGL canvas (and as its fallback). */
+.bg-fluid-static {
+  background:
+    radial-gradient(60% 55% at 20% 20%, rgba(55, 60, 240, 0.35), transparent 60%),
+    radial-gradient(55% 50% at 82% 30%, rgba(139, 92, 246, 0.3), transparent 60%),
+    radial-gradient(65% 60% at 60% 85%, rgba(90, 212, 238, 0.22), transparent 60%),
+    #0b0a0e;
+}
+
+/* Animated fluid gradient text. */
+.gradient-text {
+  background: linear-gradient(110deg, #5ad4ee, #8b5cf6, #bcbdff, #5ad4ee);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: shimmer 6s infinite linear;
+}
+
+.shimmer-btn {
+  background: linear-gradient(
+    90deg,
+    #373cf0 0%,
+    #8b5cf6 35%,
+    #5ad4ee 55%,
+    #8b5cf6 75%,
+    #373cf0 100%
+  );
+  background-size: 220% auto;
+  color: #ffffff;
+  animation: shimmer 5s infinite linear;
+}
+
+/* Glassmorphic surface: translucent, blurred, hairline-lit border. */
+.glass {
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.glass-strong {
+  background: rgba(18, 16, 26, 0.6);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Floating fluid blobs for section ambiance. */
+@keyframes blob-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(24px, -30px) scale(1.08);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.94);
+  }
+}
+
+.fluid-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.5;
+  animation: blob-float 18s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.glow-card {
+  position: relative;
+}
+.glow-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  z-index: -1;
+  background: linear-gradient(
+    45deg,
+    rgba(188, 189, 255, 0.18),
+    transparent,
+    rgba(188, 189, 255, 0.18)
+  );
+  filter: blur(12px);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.glow-card:hover::before {
+  opacity: 1;
+}
+
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.scroll-reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-zoom-in,
+  .shimmer-btn,
+  .gradient-text,
+  .fluid-blob,
+  .scroll-reveal {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .gradient-text {
+    opacity: 1 !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   RIVR Fluid landing — light theme, video hero, glass pills.
+   Scoped under `.rivr-shell` so it never affects the dark /app IDE.
+   Ported from the provided design (rivr_recreated/styles.css).
+   ═══════════════════════════════════════════════════════════════════ */
+@font-face {
+  font-family: "RivrOriginal";
+  src: url("/rivr/original-font.woff2") format("woff2");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+.rivr-shell {
+  --page-bg: #f0f0f0;
+  --ink: rgba(30, 50, 90, 0.92);
+  --ink-soft: rgba(94, 100, 112, 0.92);
+  --white: #ffffff;
+  --card-shadow: 0 10px 40px rgba(30, 50, 90, 0.06);
+
+  min-height: 100vh;
+  font-family: "RivrOriginal", system-ui, sans-serif;
+  background: var(--page-bg);
+  color: var(--ink);
+}
+
+.rivr-shell .page-shell {
+  min-height: 100vh;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--page-bg);
+}
+
+.rivr-shell .hero-card {
+  position: relative;
+  width: min(100%, 1536px);
+  height: calc(100vh - 24px);
+  overflow: hidden;
+  border-radius: 24px;
+  /* Instant blended light base — matches the poster glow so the first frame
+     already reads as the finished design (no bare/old hero). */
+  background:
+    radial-gradient(48% 52% at 60% 40%, rgba(139, 92, 246, 0.28), transparent 72%),
+    radial-gradient(42% 48% at 42% 60%, rgba(90, 212, 238, 0.24), transparent 74%),
+    radial-gradient(54% 58% at 70% 68%, rgba(55, 60, 240, 0.2), transparent 76%),
+    #eef1f5;
+}
+
+/* Keep the RIVR navy text legible over the scene. */
+.rivr-shell .hero-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(240, 242, 245, 0.5) 0%,
+    rgba(240, 242, 245, 0.12) 22%,
+    transparent 45%
+  );
+}
+
+.rivr-shell .hero-video,
+.rivr-shell .hero-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.rivr-shell .hero-video,
+.rivr-shell .hero-overlay {
+  pointer-events: none; /* never intercept clicks meant for the content above */
+}
+
+.rivr-shell .hero-video {
+  object-fit: cover;
+  object-position: 65% center;
+}
+
+.rivr-shell .hero-overlay {
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.08)),
+    radial-gradient(circle at 50% 25%, rgba(255, 255, 255, 0.22), transparent 40%),
+    linear-gradient(to bottom, rgba(240, 240, 240, 0.08), rgba(240, 240, 240, 0.14));
+}
+
+/* Interactive 3D scene, layered above the video but below the UI chrome.
+   Starts hidden and crossfades in once loaded, and is feathered at the edges so
+   it dissolves into the RIVR video rather than hard-covering it. */
+.rivr-shell .hero-spline {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  /* Feather the outer ~30% into transparency so the video frames the scene. */
+  -webkit-mask-image: radial-gradient(
+    130% 115% at 60% 42%,
+    #000 48%,
+    rgba(0, 0, 0, 0.55) 72%,
+    transparent 90%
+  );
+  mask-image: radial-gradient(
+    130% 115% at 60% 42%,
+    #000 48%,
+    rgba(0, 0, 0, 0.55) 72%,
+    transparent 90%
+  );
+}
+
+/* Instant, already-blended placeholder shown until the live scene loads,
+   so the bare video ("old") is never seen on its own during the 3D download. */
+.rivr-shell .hero-spline__poster {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+  background:
+    radial-gradient(46% 52% at 60% 40%, rgba(139, 92, 246, 0.55), transparent 70%),
+    radial-gradient(40% 46% at 44% 58%, rgba(90, 212, 238, 0.5), transparent 72%),
+    radial-gradient(52% 56% at 68% 66%, rgba(55, 60, 240, 0.45), transparent 74%);
+  filter: blur(14px);
+}
+
+/* Live interactive scene fades in; video tint bleeds through so old + new blend. */
+.rivr-shell .hero-spline canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0;
+  transition: opacity 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.rivr-shell .hero-spline--loaded canvas {
+  opacity: 0.92;
+}
+.rivr-shell .hero-spline--loaded .hero-spline__poster {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rivr-shell .hero-spline__poster,
+  .rivr-shell .hero-spline canvas {
+    transition: none;
+  }
+}
+
+.rivr-shell .hero-content {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Let clicks/drags fall through empty areas to the 3D scene, while keeping the
+   real controls interactive. */
+.rivr-shell .hero-content--interactive-children {
+  pointer-events: none;
+}
+.rivr-shell .hero-content--interactive-children .nav-links a,
+.rivr-shell .hero-content--interactive-children .book-demo,
+.rivr-shell .hero-content--interactive-children .yield-card,
+.rivr-shell .hero-content--interactive-children .doc-card {
+  pointer-events: auto;
+}
+
+.rivr-shell .top-nav {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 0;
+}
+
+.rivr-shell .nav-spacer,
+.rivr-shell .nav-right {
+  flex: 1;
+}
+
+.rivr-shell .nav-right {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.rivr-shell .nav-links {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  margin: 0;
+  padding: 0;
+  color: rgb(45, 45, 45);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.rivr-shell .nav-links li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rivr-shell .nav-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.rivr-shell .nav-links a:hover {
+  color: var(--ink);
+}
+
+.rivr-shell .chev {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.rivr-shell .book-demo,
+.rivr-shell .discord-btn,
+.rivr-shell .doc-card {
+  text-decoration: none;
+}
+
+.rivr-shell .book-demo {
+  justify-self: flex-end;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  width: fit-content;
+  background: rgba(30, 50, 90, 0.8);
+  color: #fff;
+  border-radius: 999px;
+  padding: 8px 24px 8px 8px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.rivr-shell .book-demo:hover,
+.rivr-shell .discord-btn:hover,
+.rivr-shell .doc-card:hover {
+  transform: translateY(-1px);
+}
+
+.rivr-shell .book-demo:hover {
+  background: rgba(30, 50, 90, 1);
+}
+
+.rivr-shell .icon-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+}
+
+.rivr-shell .icon-circle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.rivr-shell .book-demo .icon-circle {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.rivr-shell .hero-copy {
+  width: 100%;
+  max-width: 56rem;
+  text-align: center;
+  margin-top: 32px;
+  padding: 0 24px;
+}
+
+.rivr-shell .tag-pill {
+  width: fit-content;
+  margin: 0 auto 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(30, 50, 90, 0.9);
+  font-size: 14px;
+}
+
+.rivr-shell .spark {
+  color: rgba(30, 50, 90, 0.8);
+}
+
+.rivr-shell .hero-copy h1 {
+  margin: 0 0 8px;
+  color: #5e6470;
+  font-size: clamp(3rem, 8vw, 80px);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.rivr-shell .hero-copy p {
+  margin: 0 auto;
+  max-width: 40rem;
+  font-size: clamp(14px, 2vw, 18px);
+  line-height: 1.6;
+  color: #5e6470;
+  opacity: 0.8;
+}
+
+.rivr-shell .yield-card {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 26px 22px 18px 18px;
+  background: linear-gradient(180deg, rgba(210, 210, 210, 0.84), rgba(175, 175, 175, 0.88));
+  border-top-right-radius: 42px;
+  min-width: 188px;
+  box-shadow: var(--card-shadow);
+}
+
+.rivr-shell .yield-number {
+  color: #5e6470;
+  font-size: clamp(44px, 5vw, 58px);
+  line-height: 0.95;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+}
+
+.rivr-shell .yield-label {
+  color: rgba(30, 50, 90, 0.7);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.rivr-shell .discord-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 20px 6px 6px;
+  color: rgba(30, 50, 90, 0.9);
+  transition: transform 0.2s ease;
+}
+
+.rivr-shell .discord-btn .icon-circle.small {
+  width: 26px;
+  height: 26px;
+  background: rgba(30, 50, 90, 0.1);
+  color: rgba(30, 50, 90, 0.9);
+}
+
+.rivr-shell .discord-btn span:last-child {
+  font-size: 14px;
+}
+
+.rivr-shell .doc-card {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 32px 24px 24px 56px;
+  background: var(--page-bg);
+  border-top-left-radius: 56px;
+  color: rgba(30, 50, 90, 0.95);
+  box-shadow: 0 -2px 0 rgba(255, 255, 255, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.rivr-shell .doc-notch {
+  position: absolute;
+  display: block;
+  width: 56px;
+  height: 56px;
+  pointer-events: none;
+}
+
+.rivr-shell .doc-notch.top {
+  top: -56px;
+  right: 0;
+  background: radial-gradient(circle at bottom left, transparent 39px, var(--page-bg) 40px);
+}
+
+.rivr-shell .doc-notch.side {
+  left: -56px;
+  bottom: 0;
+  background: radial-gradient(circle at top right, transparent 39px, var(--page-bg) 40px);
+}
+
+.rivr-shell .doc-icon.large {
+  width: 56px;
+  height: 56px;
+  border: 1px solid rgba(30, 50, 90, 0.1);
+  background: rgba(30, 50, 90, 0.05);
+  color: rgba(30, 50, 90, 0.8);
+  flex: 0 0 auto;
+}
+
+.rivr-shell .doc-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rivr-shell .doc-title {
+  font-size: 20px;
+  font-weight: 400;
+  color: rgba(30, 50, 90, 0.95);
+}
+
+.rivr-shell .doc-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 15px;
+  color: rgba(30, 50, 90, 0.6);
+}
+
+@media (max-width: 960px) {
+  .rivr-shell .hero-card {
+    border-radius: 20px;
+    height: calc(100vh - 24px);
+  }
+  .rivr-shell .nav-links {
+    display: none;
+  }
+  .rivr-shell .top-nav {
+    padding: 20px 20px 0;
+  }
+  .rivr-shell .hero-copy {
+    margin-top: 28px;
+  }
+  .rivr-shell .doc-card {
+    gap: 14px;
+    padding: 24px 18px 18px 36px;
+    border-top-left-radius: 34px;
+  }
+  .rivr-shell .doc-notch,
+  .rivr-shell .doc-notch.top,
+  .rivr-shell .doc-notch.side {
+    width: 34px;
+    height: 34px;
+  }
+  .rivr-shell .doc-notch.top {
+    top: -34px;
+    background: radial-gradient(circle at bottom left, transparent 23px, var(--page-bg) 24px);
+  }
+  .rivr-shell .doc-notch.side {
+    left: -34px;
+    background: radial-gradient(circle at top right, transparent 23px, var(--page-bg) 24px);
+  }
+  .rivr-shell .doc-icon.large {
+    width: 44px;
+    height: 44px;
+  }
+  .rivr-shell .doc-title {
+    font-size: 16px;
+  }
+  .rivr-shell .doc-sub {
+    font-size: 12px;
+  }
+  .rivr-shell .yield-card {
+    min-width: 160px;
+    padding: 20px 18px 14px 14px;
+    border-top-right-radius: 32px;
+  }
+}
+
+@media (max-width: 640px) {
+  .rivr-shell .page-shell {
+    padding: 10px;
+  }
+  .rivr-shell .hero-card {
+    height: calc(100vh - 20px);
+    border-radius: 18px;
+  }
+  .rivr-shell .top-nav {
+    padding: 18px 16px 0;
+  }
+  .rivr-shell .book-demo {
+    gap: 8px;
+    padding: 7px 16px 7px 7px;
+  }
+  .rivr-shell .book-demo span:last-child {
+    font-size: 12px;
+  }
+  .rivr-shell .hero-copy {
+    margin-top: 24px;
+    padding: 0 16px;
+  }
+  .rivr-shell .yield-card {
+    transform: scale(0.92);
+    transform-origin: bottom left;
+  }
+  .rivr-shell .doc-card {
+    transform: scale(0.92);
+    transform-origin: bottom right;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Motion — fluid route transitions + in-app entrance animations.
+   All easing uses a soft "overshoot-free" curve for a calm, fluid feel.
+   ═══════════════════════════════════════════════════════════════════ */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.99);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+.page-enter {
+  animation: page-enter 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Staggered entrance for the workspace regions (activity bar → sidebar → chat → viewer). */
+.app-grid > * {
+  animation: panel-in 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.app-grid > *:nth-child(1) {
+  animation-delay: 0.15s;
+}
+.app-grid > *:nth-child(2) {
+  animation-delay: 0.32s;
+}
+.app-grid > *:nth-child(3) {
+  animation-delay: 0.49s;
+}
+.app-grid > *:nth-child(4) {
+  animation-delay: 0.66s;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Chat message reveal. */
+.msg-in {
+  animation: rise-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Staggered reveal for list items (citations, etc.). */
+.list-stagger > * {
+  animation: rise-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.list-stagger > *:nth-child(1) {
+  animation-delay: 0.06s;
+}
+.list-stagger > *:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.list-stagger > *:nth-child(3) {
+  animation-delay: 0.24s;
+}
+.list-stagger > *:nth-child(4) {
+  animation-delay: 0.33s;
+}
+.list-stagger > *:nth-child(5) {
+  animation-delay: 0.42s;
+}
+.list-stagger > *:nth-child(n + 6) {
+  animation-delay: 0.5s;
+}
+
+/* Smooth, fluid interactions on controls that already carry a transition. */
+.rivr-shell .book-demo,
+.rivr-shell .discord-btn,
+.rivr-shell .doc-card {
+  transition:
+    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.35s ease,
+    box-shadow 0.45s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .app-grid > *,
+  .msg-in,
+  .list-stagger > * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Workspace polish — card panels, elevation, display type.
+   Brings the landing's premium, rounded, airy language into the app.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* The RIVR display font, usable anywhere (headings in the workspace). */
+.font-display {
+  font-family: "RivrOriginal", "Inter", system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Elevated, rounded panel card — the core surface of the workspace. */
+.panel-card {
+  border-radius: 16px;
+  background: var(--ide-panel, #ffffff);
+  border: 1px solid #dbdfe6;
+  box-shadow:
+    0 1px 2px rgba(30, 50, 90, 0.05),
+    0 10px 30px rgba(30, 50, 90, 0.05);
+}
+
+/* Smooth collapse/expand for side panels. */
+.panel-collapse {
+  transition:
+    width 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.4s ease,
+    margin 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: width;
+}
+
+/* Soft, calm hover lift for interactive suggestion chips. */
+.suggestion-chip {
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.3s ease,
+    border-color 0.3s ease;
+}
+.suggestion-chip:hover {
+  transform: translateY(-2px);
+}
+
+/* Interactive robot in the idle source-viewer panel. */
+.spline-robot {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.spline-robot--loaded {
+  opacity: 1;
+}
+.spline-robot canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spline-robot {
+    transition: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Home showcase sections (Features / Capabilities / Developers / Docs)
+   — RIVR light aesthetic, parallax blobs, scroll-reveal.
+   ═══════════════════════════════════════════════════════════════════ */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Scroll-reveal (toggled by the Reveal component). */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.rivr-shell .rivr-showcase {
+  position: relative;
+  background: var(--page-bg);
+}
+
+.rivr-shell .rivr-section {
+  position: relative;
+  overflow: hidden;
+  padding: 96px 0;
+  scroll-margin-top: 16px;
+}
+.rivr-shell .rivr-section--tint {
+  background: linear-gradient(180deg, #eef1f6, #f5f6f9);
+}
+
+.rivr-shell .rivr-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.rivr-shell .rivr-eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #6c7386;
+  background: rgba(30, 50, 90, 0.05);
+  border: 1px solid rgba(30, 50, 90, 0.1);
+  border-radius: 999px;
+  padding: 6px 14px;
+}
+
+.rivr-shell .rivr-card {
+  height: 100%;
+  background: #ffffff;
+  border: 1px solid #e4e7ec;
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow:
+    0 1px 2px rgba(30, 50, 90, 0.04),
+    0 18px 40px rgba(30, 50, 90, 0.06);
+  transition:
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.rivr-shell .rivr-card:hover {
+  transform: translateY(-6px);
+  box-shadow:
+    0 1px 2px rgba(30, 50, 90, 0.05),
+    0 30px 60px rgba(30, 50, 90, 0.1);
+}
+
+.rivr-shell .rivr-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  color: #1e325a;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.16), rgba(90, 212, 238, 0.16));
+  border: 1px solid rgba(30, 50, 90, 0.08);
+}
+
+.rivr-shell .rivr-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: #1e325a;
+  background: rgba(90, 212, 238, 0.22);
+  border: 1px solid rgba(30, 50, 90, 0.12);
+}
+
+.rivr-shell .rivr-code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  background: #eef1f6;
+  border-radius: 6px;
+  padding: 2px 6px;
+  color: #1e325a;
+}
+
+.rivr-shell .rivr-source {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e4e7ec;
+  border-radius: 12px;
+  background: #f7f9fc;
+}
+
+.rivr-shell .rivr-stat {
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid #e4e7ec;
+  border-radius: 18px;
+  padding: 26px;
+  box-shadow: 0 12px 30px rgba(30, 50, 90, 0.05);
+}
+
+.rivr-shell .rivr-terminal {
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0e1524;
+  box-shadow: 0 24px 60px rgba(14, 21, 36, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.rivr-shell .rivr-terminal__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #161f31;
+}
+.rivr-shell .rivr-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  display: inline-block;
+}
+.rivr-shell .rivr-terminal__body {
+  margin: 0;
+  padding: 18px;
+  font-family: ui-monospace, monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #cbd6ea;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.rivr-shell .rivr-badge {
+  font-size: 13px;
+  color: #33405c;
+  background: #ffffff;
+  border: 1px solid #e0e4ea;
+  border-radius: 999px;
+  padding: 8px 16px;
+  box-shadow: 0 2px 8px rgba(30, 50, 90, 0.04);
+}
+
+.rivr-shell .rivr-cta {
+  position: relative;
+  background: linear-gradient(180deg, #ffffff, #f3f6fb);
+  border: 1px solid #e4e7ec;
+  border-radius: 28px;
+  padding: 56px 28px;
+  box-shadow: 0 30px 70px rgba(30, 50, 90, 0.08);
+}
+.rivr-shell .rivr-cta__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  background: #1e325a;
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 12px 26px;
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.3s ease,
+    box-shadow 0.35s ease;
+}
+.rivr-shell .rivr-cta__btn:hover {
+  transform: translateY(-2px);
+  background: #16264a;
+  box-shadow: 0 16px 30px rgba(30, 50, 90, 0.25);
+}
+
+.rivr-shell .rivr-footer {
+  background: #e9edf3;
+  border-top: 1px solid #dfe3ea;
+  padding: 40px 0;
+}
+
+/* Parallax blobs (drift on scroll via the Parallax component). */
+.rivr-shell .rivr-blob {
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  border-radius: 999px;
+  filter: blur(72px);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+.rivr-shell .rivr-blob--violet {
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.5), transparent 68%);
+}
+.rivr-shell .rivr-blob--cyan {
+  background: radial-gradient(circle, rgba(90, 212, 238, 0.5), transparent 68%);
+}
+.rivr-shell .rivr-blob--indigo {
+  background: radial-gradient(circle, rgba(55, 60, 240, 0.4), transparent 68%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
