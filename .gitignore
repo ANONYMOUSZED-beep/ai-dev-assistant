@@ -40,3 +40,6 @@ yarn-error.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# HF Space deploy clone (should live outside workspace)
+/hf-backend/
