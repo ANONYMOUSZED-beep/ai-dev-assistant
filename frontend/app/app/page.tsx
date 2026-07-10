@@ -3,10 +3,11 @@
 import { ListTree } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import ActivityBar from "@/components/ActivityBar";
+import AuthGate from "@/components/AuthGate";
 import ChatPanel from "@/components/ChatPanel";
 import CitationsList from "@/components/CitationsList";
 import CodeViewer from "@/components/CodeViewer";
-import ActivityBar from "@/components/ActivityBar";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 import { useChat } from "@/hooks/useChat";
@@ -22,7 +23,7 @@ import type {
 
 const TERMINAL: IndexStatus[] = ["ready", "failed"];
 
-export default function AppPage() {
+function Workspace() {
   const [mode, setMode] = useState<ChatMode>("docs");
   const [collection, setCollection] = useState("python");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -242,5 +243,13 @@ export default function AppPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AppPage() {
+  return (
+    <AuthGate>
+      <Workspace />
+    </AuthGate>
   );
 }

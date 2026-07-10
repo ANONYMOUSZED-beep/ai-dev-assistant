@@ -1,20 +1,31 @@
 """Pytest fixtures.
 
-Tests run against the FastAPI app with the heavy engines (RAG pipeline, LLM provider)
-replaced by lightweight fakes attached to ``app.state``. We use httpx's ASGITransport,
-which does not trigger the lifespan, so no models are loaded and no database/Redis is
-required.
+Two client fixtures:
+
+* ``client`` — engines faked and auth bypassed (``get_current_user`` overridden).
+  Used to test the feature endpoints without a real database or token.
+* ``db_client`` — a real in-memory SQLite database with auth *enabled*, for
+  testing registration/login and anything that persists.
+
+Both use httpx's ASGITransport, which does not trigger the lifespan.
 """
 
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
 
+import app.db.models  # noqa: F401 - register models on Base.metadata
 import pytest_asyncio
+from app.core.deps import get_current_user
+from app.db.base import Base
+from app.db.models import User
+from app.db.session import get_session
 from app.main import app
 from app.schemas.llm import LLMMessage, LLMResponse
 from app.schemas.rag import Chunk, Document, RetrievedChunk, SourceType
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
 
 class FakeLLMProvider:
@@ -69,10 +80,48 @@ class FakeRagPipeline:
         return None
 
 
+def _fake_user() -> User:
+    return User(id="test-user", username="tester", password_hash="")
+
+
 @pytest_asyncio.fixture
 async def client() -> AsyncIterator[AsyncClient]:
+    """Authenticated (bypassed) client with faked engines."""
     app.state.rag_pipeline = FakeRagPipeline()
     app.state.llm_provider = FakeLLMProvider()
+    app.dependency_overrides[get_current_user] = _fake_user
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest_asyncio.fixture
+async def db_client() -> AsyncIterator[AsyncClient]:
+    """Client backed by a real in-memory SQLite DB with auth enabled."""
+    engine = create_async_engine(
+        "sqlite+aiosqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
+
+    async def _override_get_session() -> AsyncIterator:
+        async with sessionmaker() as session:
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+
+    app.state.rag_pipeline = FakeRagPipeline()
+    app.state.llm_provider = FakeLLMProvider()
+    app.dependency_overrides[get_session] = _override_get_session
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+    app.dependency_overrides.pop(get_session, None)
+    await engine.dispose()

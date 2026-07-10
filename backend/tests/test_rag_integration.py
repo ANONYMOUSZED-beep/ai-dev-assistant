@@ -174,29 +174,38 @@ async def test_delete_collection_clears_index(tmp_path) -> None:
 async def test_full_request_path_with_real_pipeline(tmp_path) -> None:
     """Drive the API with the real pipeline + a fake LLM: ingest, then chat, and
     assert the answer's citations came from genuine retrieval."""
+    from app.core.deps import get_current_user
+    from app.db.models import User
+
     app.state.rag_pipeline = _build_pipeline(tmp_path)
     app.state.llm_provider = FakeLLM()
+    app.dependency_overrides[get_current_user] = lambda: User(
+        id="test-user", username="tester", password_hash=""
+    )
 
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        for doc in _docs():
-            resp = await client.post(
-                "/api/v1/documents/ingest",
-                json={
-                    "collection": "docs",
-                    "text": doc.content,
-                    "title": doc.title,
-                },
-            )
-            assert resp.status_code == 200
+    try:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            for doc in _docs():
+                resp = await client.post(
+                    "/api/v1/documents/ingest",
+                    json={
+                        "collection": "docs",
+                        "text": doc.content,
+                        "title": doc.title,
+                    },
+                )
+                assert resp.status_code == 200
 
-        answer = await client.post(
-            "/api/v1/chat",
-            json={"question": "How does FastAPI dependency injection work?"},
-        )
-        assert answer.status_code == 200
-        body = answer.json()
-        assert body["provider"] == "fake"
-        assert len(body["citations"]) >= 1
-        # The top citation should be the FastAPI doc, proving real retrieval ran.
-        assert any("FastAPI" in c["title"] for c in body["citations"])
+            answer = await client.post(
+                "/api/v1/chat",
+                json={"question": "How does FastAPI dependency injection work?"},
+            )
+            assert answer.status_code == 200
+            body = answer.json()
+            assert body["provider"] == "fake"
+            assert len(body["citations"]) >= 1
+            # The top citation should be the FastAPI doc, proving real retrieval ran.
+            assert any("FastAPI" in c["title"] for c in body["citations"])
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)

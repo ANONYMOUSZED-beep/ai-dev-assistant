@@ -24,6 +24,15 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class Document(Base):
     __tablename__ = "documents"
 
@@ -61,6 +70,10 @@ class Repository(Base):
     __tablename__ = "repositories"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    # Owner — repositories are private to the user who added them.
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     url: Mapped[str] = mapped_column(String(1024))
     branch: Mapped[str | None] = mapped_column(String(256), nullable=True)
     collection: Mapped[str] = mapped_column(String(128), index=True)

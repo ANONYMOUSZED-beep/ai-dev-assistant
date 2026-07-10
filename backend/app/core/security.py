@@ -1,13 +1,9 @@
-"""API authentication and rate limiting.
+"""Request rate limiting.
 
-Two lightweight, dependency-based guards protect the data endpoints:
-
-* :func:`require_api_key` — validates an ``X-API-Key`` header against the set of
-  keys configured via ``API_KEYS``. When no keys are configured (typical for local
-  development) authentication is disabled so the app stays friction-free.
-* :func:`enforce_rate_limit` — a fixed-window limiter backed by Redis, keyed by API
-  key (or client IP as a fallback). If Redis is unavailable the limiter *degrades
-  open* rather than failing requests, so a cache outage never takes the API down.
+:func:`enforce_rate_limit` is a fixed-window limiter backed by Redis, keyed by the
+bearer token (or client IP as a fallback). If Redis is unavailable the limiter
+*degrades open* rather than failing requests, so a cache outage never takes the
+API down. Authentication itself is handled by ``app.core.deps.get_current_user``.
 """
 
 from __future__ import annotations
@@ -16,34 +12,19 @@ from fastapi import Request
 
 from app.cache.redis import get_redis
 from app.core.deps import SettingsDep
-from app.core.exceptions import AuthError, RateLimitError
+from app.core.exceptions import RateLimitError
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-_API_KEY_HEADER = "x-api-key"
-
 
 def _client_identifier(request: Request) -> str:
     """Derive a stable identity for rate limiting from the request."""
-    api_key = request.headers.get(_API_KEY_HEADER)
-    if api_key:
-        return f"key:{api_key}"
+    auth = request.headers.get("authorization", "")
+    if auth:
+        return f"tok:{auth[-24:]}"  # tail of the bearer token, avoids logging full token
     client = request.client
     return f"ip:{client.host}" if client else "ip:anonymous"
-
-
-async def require_api_key(request: Request, settings: SettingsDep) -> None:
-    """Reject requests lacking a valid ``X-API-Key`` when keys are configured.
-
-    No-op when ``settings.api_keys`` is empty, keeping local development open.
-    """
-    allowed = settings.api_keys
-    if not allowed:
-        return
-    provided = request.headers.get(_API_KEY_HEADER)
-    if provided is None or provided not in allowed:
-        raise AuthError("Missing or invalid API key")
 
 
 async def _hit_within_window(client, key: str, limit: int, window_seconds: int) -> bool:
@@ -77,10 +58,3 @@ async def enforce_rate_limit(request: Request, settings: SettingsDep) -> None:
             "Rate limit exceeded. Please slow down and try again shortly.",
             details={"limit_per_minute": limit},
         )
-
-
-def auth_and_rate_limit_dependencies() -> list:
-    """Dependency list applied to every protected router."""
-    from fastapi import Depends
-
-    return [Depends(require_api_key), Depends(enforce_rate_limit)]

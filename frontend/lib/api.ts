@@ -18,38 +18,39 @@ import type {
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
-// Optional client API key. When set, it is sent as X-API-Key on every request so
-// the app works against a backend that has authentication enabled.
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "";
+const TOKEN_KEY = "rivr_token";
 
-/**
- * Stable per-browser session id, persisted in localStorage. Sent as
- * X-Session-Id so each visitor's repositories are isolated on the shared
- * backend, without requiring user accounts.
- */
-function getSessionId(): string {
+/** JWT access token, persisted in localStorage after login/register. */
+export function getToken(): string {
   if (typeof window === "undefined") return "";
   try {
-    let id = window.localStorage.getItem("rivr_session_id");
-    if (!id) {
-      id =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `s_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      window.localStorage.setItem("rivr_session_id", id);
-    }
-    return id;
+    return window.localStorage.getItem(TOKEN_KEY) ?? "";
   } catch {
     return "";
   }
 }
 
-/** Merge the API-key and per-session headers into a headers object. */
+export function setToken(token: string): void {
+  try {
+    window.localStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearToken(): void {
+  try {
+    window.localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Merge the Authorization bearer header (when logged in) into a headers object. */
 function withHeaders(headers: HeadersInit = {}): HeadersInit {
   const merged: Record<string, string> = { ...(headers as Record<string, string>) };
-  if (API_KEY) merged["X-API-Key"] = API_KEY;
-  const sessionId = getSessionId();
-  if (sessionId) merged["X-Session-Id"] = sessionId;
+  const token = getToken();
+  if (token) merged["Authorization"] = `Bearer ${token}`;
   return merged;
 }
 
@@ -323,4 +324,28 @@ export function debugError(req: DebugRequest): Promise<Answer> {
 // ── Pair programmer ───────────────────────────────────────────────
 export function pairProgram(req: PairRequest): Promise<Answer> {
   return request<Answer>("/pair", jsonBody(req));
+}
+
+// ── Auth ──────────────────────────────────────────────────────────
+export interface AuthToken {
+  access_token: string;
+  token_type: string;
+  username: string;
+}
+
+export interface CurrentUser {
+  id: string;
+  username: string;
+}
+
+export function register(username: string, password: string): Promise<AuthToken> {
+  return request<AuthToken>("/auth/register", jsonBody({ username, password }));
+}
+
+export function login(username: string, password: string): Promise<AuthToken> {
+  return request<AuthToken>("/auth/login", jsonBody({ username, password }));
+}
+
+export function fetchMe(): Promise<CurrentUser> {
+  return request<CurrentUser>("/auth/me", { method: "GET" });
 }

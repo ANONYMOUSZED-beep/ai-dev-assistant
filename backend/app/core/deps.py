@@ -8,7 +8,7 @@ DB sessions and the Redis cache are provided per-request.
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,17 +19,35 @@ from app.db.session import get_session
 from app.llm.base import BaseLLMProvider
 from app.rag.pipeline import RagPipeline
 
+if TYPE_CHECKING:
+    from app.db.models import User
 
-def get_session_id(request: Request) -> str:
-    """Per-client isolation key from the ``X-Session-Id`` header.
 
-    The frontend generates a stable random id per browser and sends it on every
-    request, so each person's repositories are scoped to their own session
-    without requiring user accounts. Falls back to a shared ``"public"`` bucket
-    when absent (e.g. direct API calls).
+async def get_current_user(
+    request: Request, session: Annotated[AsyncSession, Depends(get_session)]
+) -> User:
+    """Resolve the authenticated user from a ``Authorization: Bearer <jwt>`` header.
+
+    Raises :class:`AuthError` (401) when the token is missing, invalid, expired, or
+    refers to a user that no longer exists.
     """
-    session_id = request.headers.get("x-session-id", "").strip()
-    return session_id or "public"
+    from app.core.auth import decode_token
+    from app.core.exceptions import AuthError
+    from app.db.models import User
+
+    header = request.headers.get("authorization", "")
+    scheme, _, token = header.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        raise AuthError("Missing or invalid Authorization header")
+
+    user_id = decode_token(token.strip())
+    if user_id is None:
+        raise AuthError("Invalid or expired token")
+
+    user = await session.get(User, user_id)
+    if user is None:
+        raise AuthError("User no longer exists")
+    return user
 
 
 def get_rag_pipeline(request: Request) -> RagPipeline:
@@ -49,8 +67,8 @@ async def get_cache() -> AsyncGenerator[RedisCache, None]:
 
 # Reusable annotated dependencies for concise route signatures.
 SettingsDep = Annotated[Settings, Depends(get_settings)]
-SessionIdDep = Annotated[str, Depends(get_session_id)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 CacheDep = Annotated[RedisCache, Depends(get_cache)]
 RagDep = Annotated[RagPipeline, Depends(get_rag_pipeline)]
 LLMDep = Annotated[BaseLLMProvider, Depends(get_llm)]
+CurrentUserDep = Annotated["User", Depends(get_current_user)]

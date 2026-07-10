@@ -69,6 +69,12 @@ class Settings(BaseSettings):
     # Fixed-window request cap per client, per minute. 0 disables rate limiting.
     rate_limit_per_minute: int = 60
 
+    # ── Auth (JWT) ───────────────────────────────────────────────
+    # Secret used to sign JWTs. MUST be set to a long random value in production.
+    jwt_secret: str = "dev-insecure-change-me"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
+
     # ── Database ─────────────────────────────────────────────────
     postgres_user: str = "devassist"
     postgres_password: str = "devassist"

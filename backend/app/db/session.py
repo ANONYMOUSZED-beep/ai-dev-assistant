@@ -18,15 +18,44 @@ _engine: AsyncEngine | None = None
 _sessionmaker: async_sessionmaker[AsyncSession] | None = None
 
 
+def _prepare(url: str) -> tuple[str, dict[str, object]]:
+    """Normalise a DB URL for asyncpg and derive connect args.
+
+    Managed Postgres (e.g. Neon) hands out libpq-style URLs with ``sslmode`` /
+    ``channel_binding`` query params that asyncpg rejects. We strip those and
+    enable TLS via ``connect_args`` for non-local hosts.
+    """
+    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+    if url.startswith("sqlite"):
+        return url, {}
+
+    parts = urlsplit(url)
+    kept = [
+        (k, v)
+        for k, v in parse_qsl(parts.query)
+        if k not in ("sslmode", "channel_binding")
+    ]
+    clean = urlunsplit(
+        (parts.scheme, parts.netloc, parts.path, urlencode(kept), parts.fragment)
+    )
+    connect_args: dict[str, object] = {}
+    if (parts.hostname or "") not in ("localhost", "127.0.0.1", ""):
+        connect_args["ssl"] = True  # managed Postgres requires TLS
+    return clean, connect_args
+
+
 def get_engine(settings: Settings | None = None) -> AsyncEngine:
     """Return the process-wide async engine, creating it on first use."""
     global _engine
     if _engine is None:
         settings = settings or get_settings()
+        url, connect_args = _prepare(settings.async_database_url)
         _engine = create_async_engine(
-            settings.async_database_url,
+            url,
             pool_pre_ping=True,
             future=True,
+            connect_args=connect_args,
         )
     return _engine
 

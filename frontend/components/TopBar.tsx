@@ -4,6 +4,7 @@ import {
   Bug,
   FileText,
   GitBranch,
+  LogOut,
   type LucideIcon,
   PanelLeft,
   PanelRight,
@@ -12,6 +13,7 @@ import {
   Terminal,
 } from "lucide-react";
 
+import { useAuth } from "@/components/AuthGate";
 import type { ChatMode } from "@/lib/types";
 
 interface TopBarProps {
@@ -39,6 +41,7 @@ export default function TopBar({
 }: TopBarProps) {
   const meta = MODE_META[mode];
   const Icon = meta.icon;
+  const { user, logout } = useAuth();
 
   return (
     <header className="z-50 flex h-14 shrink-0 items-center justify-between px-4">
@@ -90,6 +93,23 @@ export default function TopBar({
         >
           <PanelRight size={18} />
         </button>
+
+        {user ? (
+          <div className="ml-1 flex items-center gap-1 border-l border-ide-border pl-2">
+            <span className="max-w-[10rem] truncate text-xs text-ide-muted" title={user.username}>
+              {user.username}
+            </span>
+            <button
+              type="button"
+              aria-label="Sign out"
+              title="Sign out"
+              onClick={logout}
+              className="rounded-lg p-2 text-ide-muted transition-colors hover:bg-ide-hover hover:text-ide-text focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        ) : null}
       </div>
     </header>
   );
