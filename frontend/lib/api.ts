@@ -22,9 +22,35 @@ export const API_BASE_URL =
 // the app works against a backend that has authentication enabled.
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "";
 
-/** Merge the API-key header (when configured) into a headers object. */
-function withApiKey(headers: HeadersInit = {}): HeadersInit {
-  return API_KEY ? { ...headers, "X-API-Key": API_KEY } : headers;
+/**
+ * Stable per-browser session id, persisted in localStorage. Sent as
+ * X-Session-Id so each visitor's repositories are isolated on the shared
+ * backend, without requiring user accounts.
+ */
+function getSessionId(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    let id = window.localStorage.getItem("rivr_session_id");
+    if (!id) {
+      id =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `s_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      window.localStorage.setItem("rivr_session_id", id);
+    }
+    return id;
+  } catch {
+    return "";
+  }
+}
+
+/** Merge the API-key and per-session headers into a headers object. */
+function withHeaders(headers: HeadersInit = {}): HeadersInit {
+  const merged: Record<string, string> = { ...(headers as Record<string, string>) };
+  if (API_KEY) merged["X-API-Key"] = API_KEY;
+  const sessionId = getSessionId();
+  if (sessionId) merged["X-Session-Id"] = sessionId;
+  return merged;
 }
 
 export class ApiError extends Error {
@@ -42,7 +68,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     res = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
-      headers: withApiKey({
+      headers: withHeaders({
         "Content-Type": "application/json",
         ...(init?.headers ?? {}),
       }),
@@ -108,7 +134,7 @@ export async function chatStream(
   try {
     res = await fetch(`${API_BASE_URL}/chat/stream`, {
       method: "POST",
-      headers: withApiKey({
+      headers: withHeaders({
         "Content-Type": "application/json",
         Accept: "text/event-stream",
       }),
@@ -220,7 +246,7 @@ export async function uploadDocument(
     // Note: no Content-Type header — the browser sets the multipart boundary.
     res = await fetch(`${API_BASE_URL}/documents/upload`, {
       method: "POST",
-      headers: withApiKey(),
+      headers: withHeaders(),
       body: form,
     });
   } catch (err) {

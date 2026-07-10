@@ -31,13 +31,18 @@ class RepoRecord:
 
 
 class RepositoryRegistry:
-    """Async-safe, in-memory store of :class:`RepoRecord` objects."""
+    """Async-safe, in-memory store of :class:`RepoRecord` objects, per session.
+
+    Records are bucketed by an opaque ``session_id`` so each client only sees the
+    repositories they added. Repository ids are globally unique (UUIDs), so the
+    vector-store collections keyed by id stay isolated too.
+    """
 
     def __init__(self) -> None:
-        self._items: dict[str, RepoRecord] = {}
+        self._sessions: dict[str, dict[str, RepoRecord]] = {}
         self._lock = asyncio.Lock()
 
-    async def create(self, url: str, branch: str | None) -> RepoRecord:
+    async def create(self, session_id: str, url: str, branch: str | None) -> RepoRecord:
         async with self._lock:
             record = RepoRecord(
                 id=uuid.uuid4().hex[:12],
@@ -45,24 +50,30 @@ class RepositoryRegistry:
                 branch=branch,
                 status="pending",
             )
-            self._items[record.id] = record
+            self._sessions.setdefault(session_id, {})[record.id] = record
             return record
 
-    async def get(self, repository_id: str) -> RepoRecord | None:
+    async def get(self, session_id: str, repository_id: str) -> RepoRecord | None:
         async with self._lock:
-            return self._items.get(repository_id)
+            return self._sessions.get(session_id, {}).get(repository_id)
 
-    async def list(self) -> list[RepoRecord]:
+    async def list(self, session_id: str) -> list[RepoRecord]:
         async with self._lock:
-            return list(self._items.values())
+            return list(self._sessions.get(session_id, {}).values())
 
-    async def delete(self, repository_id: str) -> bool:
+    async def delete(self, session_id: str, repository_id: str) -> bool:
         async with self._lock:
-            return self._items.pop(repository_id, None) is not None
+            bucket = self._sessions.get(session_id)
+            if bucket is not None and repository_id in bucket:
+                del bucket[repository_id]
+                return True
+            return False
 
-    async def update(self, repository_id: str, **changes: object) -> RepoRecord | None:
+    async def update(
+        self, session_id: str, repository_id: str, **changes: object
+    ) -> RepoRecord | None:
         async with self._lock:
-            record = self._items.get(repository_id)
+            record = self._sessions.get(session_id, {}).get(repository_id)
             if record is not None:
                 for key, value in changes.items():
                     setattr(record, key, value)

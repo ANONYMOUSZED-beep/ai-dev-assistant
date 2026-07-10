@@ -20,6 +20,18 @@ from app.llm.base import BaseLLMProvider
 from app.rag.pipeline import RagPipeline
 
 
+def get_session_id(request: Request) -> str:
+    """Per-client isolation key from the ``X-Session-Id`` header.
+
+    The frontend generates a stable random id per browser and sends it on every
+    request, so each person's repositories are scoped to their own session
+    without requiring user accounts. Falls back to a shared ``"public"`` bucket
+    when absent (e.g. direct API calls).
+    """
+    session_id = request.headers.get("x-session-id", "").strip()
+    return session_id or "public"
+
+
 def get_rag_pipeline(request: Request) -> RagPipeline:
     """Return the shared RAG pipeline created at startup."""
     return request.app.state.rag_pipeline
@@ -37,6 +49,7 @@ async def get_cache() -> AsyncGenerator[RedisCache, None]:
 
 # Reusable annotated dependencies for concise route signatures.
 SettingsDep = Annotated[Settings, Depends(get_settings)]
+SessionIdDep = Annotated[str, Depends(get_session_id)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 CacheDep = Annotated[RedisCache, Depends(get_cache)]
 RagDep = Annotated[RagPipeline, Depends(get_rag_pipeline)]
