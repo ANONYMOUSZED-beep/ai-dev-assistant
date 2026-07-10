@@ -31,13 +31,18 @@ def _prepare(url: str) -> tuple[str, dict[str, object]]:
         return url, {}
 
     parts = urlsplit(url)
+    # Managed providers hand out libpq scheme (postgres:// or postgresql://).
+    # SQLAlchemy's async engine needs the asyncpg driver explicitly.
+    scheme = parts.scheme
+    if scheme in ("postgres", "postgresql"):
+        scheme = "postgresql+asyncpg"
     kept = [
         (k, v)
         for k, v in parse_qsl(parts.query)
         if k not in ("sslmode", "channel_binding")
     ]
     clean = urlunsplit(
-        (parts.scheme, parts.netloc, parts.path, urlencode(kept), parts.fragment)
+        (scheme, parts.netloc, parts.path, urlencode(kept), parts.fragment)
     )
     connect_args: dict[str, object] = {}
     if (parts.hostname or "") not in ("localhost", "127.0.0.1", ""):
