@@ -1256,3 +1256,30 @@ html {
     transition: none !important;
   }
 }
+
+/* ── Lenis smooth scroll (recommended base styles) ───────────────── */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+/* Perf: keep the heavy blurred blobs on their own GPU layer so translating
+   them on scroll doesn't force the browser to re-rasterize the blur. */
+.rivr-shell .rivr-blob {
+  will-change: transform;
+  transform: translateZ(0);
+  contain: paint;
+  backface-visibility: hidden;
+}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import HomeShowcase from "@/components/HomeShowcase";
+import SmoothScroll from "@/components/SmoothScroll";
 import SplineHero from "@/components/SplineHero";
 
 /** Diagonal "open" arrow used inside every circular icon (matches the design). */
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
 
 export default function LandingPage() {
   return (
+    <SmoothScroll>
     <div className="rivr-shell">
       <main>
         <div className="page-shell">
@@ -103,5 +105,6 @@ export default function LandingPage() {
         <HomeShowcase />
       </main>
     </div>
+    </SmoothScroll>
   );
 }
