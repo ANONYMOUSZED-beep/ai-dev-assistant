@@ -13,12 +13,21 @@ import json
 import threading
 from typing import TYPE_CHECKING, Any
 
+from app.core.logging import get_logger
 from app.schemas.rag import Chunk, RetrievedChunk, SourceType
 
 if TYPE_CHECKING:
     from psycopg2.pool import ThreadedConnectionPool
 
+logger = get_logger(__name__)
+
 _TABLE = "vector_chunks"
+
+# Fail fast instead of hanging forever if the managed DB is unreachable or a
+# statement stalls (e.g. connecting to a suspended Neon endpoint). Without these,
+# a stalled connection would block the request until the platform proxy drops it.
+_CONNECT_TIMEOUT_SECONDS = 15
+_STATEMENT_TIMEOUT_MS = 30000
 
 
 def _to_vector_literal(vector: list[float]) -> str:
@@ -42,7 +51,19 @@ class PgVectorStore:
                 if self._pool is None:
                     from psycopg2.pool import ThreadedConnectionPool
 
-                    self._pool = ThreadedConnectionPool(1, 8, dsn=self._dsn)
+                    logger.info("pgvector: creating connection pool")
+                    # ``connect_timeout`` bounds the initial TCP/TLS handshake so an
+                    # unreachable/suspended host fails fast instead of hanging.
+                    # ``options`` sets a per-session statement timeout so a stalled
+                    # query cannot block the request indefinitely.
+                    self._pool = ThreadedConnectionPool(
+                        1,
+                        8,
+                        dsn=self._dsn,
+                        connect_timeout=_CONNECT_TIMEOUT_SECONDS,
+                        options=f"-c statement_timeout={_STATEMENT_TIMEOUT_MS}",
+                    )
+                    logger.info("pgvector: connection pool ready")
         return self._pool
 
     def _ensure_schema(self) -> None:
@@ -51,6 +72,7 @@ class PgVectorStore:
         with self._lock:
             if self._ready:
                 return
+            logger.info("pgvector: ensuring schema (extension + table)")
             conn = self._get_pool().getconn()
             try:
                 with conn.cursor() as cur:
@@ -79,6 +101,7 @@ class PgVectorStore:
                     )
                 conn.commit()
                 self._ready = True
+                logger.info("pgvector: schema ready")
             finally:
                 self._get_pool().putconn(conn)
 
@@ -111,6 +134,7 @@ class PgVectorStore:
             )
             for c, v in zip(chunks, vectors, strict=True)
         ]
+        logger.info("pgvector: inserting %d rows into %s", len(rows), collection)
         conn = self._get_pool().getconn()
         try:
             with conn.cursor() as cur:
@@ -131,6 +155,7 @@ class PgVectorStore:
                     template="(%s,%s,%s::vector,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb)",
                 )
             conn.commit()
+            logger.info("pgvector: insert committed (%d rows)", len(rows))
         finally:
             self._get_pool().putconn(conn)
 
