@@ -25,4 +25,9 @@ def get_vector_store(settings: Settings) -> VectorStore:
         from app.rag.vectorstore.chroma_store import ChromaVectorStore
 
         return ChromaVectorStore(settings.vector_store_path)
+    if name == "pgvector":
+        from app.db.session import get_sync_dsn
+        from app.rag.vectorstore.pgvector_store import PgVectorStore
+
+        return PgVectorStore(get_sync_dsn(settings))
     raise ValueError(f"Unsupported vector store: {name!r}")

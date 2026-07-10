@@ -56,6 +56,30 @@ def _prepare(url: str) -> tuple[str, dict[str, object]]:
     return clean, connect_args
 
 
+def get_sync_dsn(settings: Settings | None = None) -> str:
+    """Return a libpq DSN (for psycopg2 / pgvector) from the configured DB URL.
+
+    Uses the plain ``postgresql://`` scheme (no async driver) and ensures TLS for
+    managed hosts, tolerating the same ``psql '...'`` paste form as the async URL.
+    """
+    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+    settings = settings or get_settings()
+    url = settings.async_database_url.strip()
+    if url.lower().startswith("psql"):
+        url = url[4:].strip()
+    url = url.strip("'\"").strip()
+
+    parts = urlsplit(url)
+    query = dict(parse_qsl(parts.query))
+    host = parts.hostname or ""
+    if host not in ("localhost", "127.0.0.1", "") and "sslmode" not in query:
+        query["sslmode"] = "require"
+    return urlunsplit(
+        ("postgresql", parts.netloc, parts.path, urlencode(query), parts.fragment)
+    )
+
+
 def get_engine(settings: Settings | None = None) -> AsyncEngine:
     """Return the process-wide async engine, creating it on first use."""
     global _engine

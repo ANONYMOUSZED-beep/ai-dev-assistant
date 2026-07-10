@@ -13,7 +13,7 @@ from typing import Annotated, Literal
 from pydantic import Field, computed_field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
-VectorStoreName = Literal["faiss", "chroma"]
+VectorStoreName = Literal["faiss", "chroma", "pgvector"]
 LLMProviderName = Literal["openai", "anthropic", "gemini", "deepseek", "qwen", "groq"]
 Environment = Literal["development", "production"]
 
