@@ -27,6 +27,12 @@ def _prepare(url: str) -> tuple[str, dict[str, object]]:
     """
     from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+    # Tolerate pasting Neon's `psql '<url>'` command form (prefix + quotes).
+    url = url.strip()
+    if url.lower().startswith("psql"):
+        url = url[4:].strip()
+    url = url.strip("'\"").strip()
+
     if url.startswith("sqlite"):
         return url, {}
 
