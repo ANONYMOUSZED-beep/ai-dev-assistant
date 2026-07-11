@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     backend_cors_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:3000"]
     )
+    # Optional regex matching allowed origins, in addition to the explicit list above.
+    # Useful for platforms with rotating preview URLs (e.g. Vercel), so you don't have
+    # to enumerate every deployment domain. Example: r"https://.*\.vercel\.app"
+    backend_cors_origin_regex: str | None = None
 
     # ── Security ─────────────────────────────────────────────────
     # Allowed client API keys. When empty, authentication is disabled (local dev).

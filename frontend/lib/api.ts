@@ -15,8 +15,18 @@ import type {
   RepositoryResponse,
 } from "./types";
 
+// Backend base URL.
+// - Local dev sets NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1 in
+//   frontend/.env.local (which is git-ignored, so it never ships to Vercel).
+// - On Vercel, .env.local is absent, so we fall back to the deployed Hugging Face
+//   Space rather than localhost — otherwise the browser would try to reach a
+//   backend on the visitor's own machine. You can still override this per
+//   environment by setting NEXT_PUBLIC_API_BASE_URL in the Vercel dashboard.
+const PRODUCTION_API_BASE_URL =
+  "https://arun103-ai-dev-assistant-api.hf.space/api/v1";
+
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? PRODUCTION_API_BASE_URL;
 
 const TOKEN_KEY = "rivr_token";
 

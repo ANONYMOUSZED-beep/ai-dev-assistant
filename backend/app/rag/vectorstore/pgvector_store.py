@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import threading
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from typing import TYPE_CHECKING, Any
 
 from app.core.logging import get_logger
@@ -92,15 +92,11 @@ class PgVectorStore:
         finally:
             # Clear any open transaction (e.g. read-only SELECTs) before returning the
             # connection to the pool so the next borrower starts clean.
-            try:
+            with suppress(Exception):
                 if not conn.autocommit:
                     conn.rollback()
-            except Exception:
-                pass
-            try:
+            with suppress(Exception):
                 conn.autocommit = False
-            except Exception:
-                pass
             self._get_pool().putconn(conn)
 
     def warmup(self) -> None:
