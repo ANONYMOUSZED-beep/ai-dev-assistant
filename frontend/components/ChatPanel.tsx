@@ -278,7 +278,7 @@ export default function ChatPanel({
 
   return (
     <section
-      className="flex h-full min-w-0 flex-col bg-ide-bg"
+      className="flex h-full min-w-0 flex-1 flex-col bg-ide-bg"
       aria-label="Conversation"
     >
       <div className="flex items-center justify-between border-b border-ide-border bg-ide-panel/40 px-4 py-2 text-[0.7rem] text-ide-muted">
