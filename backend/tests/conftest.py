@@ -86,14 +86,39 @@ def _fake_user() -> User:
 
 @pytest_asyncio.fixture
 async def client() -> AsyncIterator[AsyncClient]:
-    """Authenticated (bypassed) client with faked engines."""
+    """Authenticated (bypassed) client with faked engines and an in-memory DB.
+
+    Auth is bypassed via a fake user, but a real in-memory SQLite session is provided
+    so endpoints that persist (e.g. conversation history) work deterministically.
+    """
+    engine = create_async_engine(
+        "sqlite+aiosqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
+
+    async def _override_get_session() -> AsyncIterator:
+        async with sessionmaker() as session:
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+
     app.state.rag_pipeline = FakeRagPipeline()
     app.state.llm_provider = FakeLLMProvider()
     app.dependency_overrides[get_current_user] = _fake_user
+    app.dependency_overrides[get_session] = _override_get_session
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
     app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_session, None)
+    await engine.dispose()
 
 
 @pytest_asyncio.fixture

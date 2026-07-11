@@ -108,13 +108,48 @@ def get_sessionmaker() -> async_sessionmaker[AsyncSession]:
 
 
 async def init_db() -> None:
-    """Create tables for all registered models (dev convenience / first run)."""
+    """Create tables for all registered models (dev convenience / first run).
+
+    Also applies a few additive column migrations for tables that predate newer
+    columns. ``create_all`` only creates *missing* tables — it never alters an
+    existing one — so on a database where ``conversations`` already exists we add
+    the newer columns idempotently.
+    """
     # Import models so they register on the metadata before create_all.
     from app.db import models  # noqa: F401
 
     engine = get_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await _apply_additive_migrations(conn)
+
+
+# Additive, idempotent column migrations keyed by dialect. PostgreSQL supports
+# ``ADD COLUMN IF NOT EXISTS`` natively; SQLite (used in tests) always gets a fresh
+# schema from create_all, so migrations there are unnecessary and skipped.
+_PG_MIGRATIONS: tuple[str, ...] = (
+    "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS user_id VARCHAR(36)",
+    "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS kind VARCHAR(16) DEFAULT 'docs'",
+    "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS repository_id VARCHAR(36)",
+    "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ",
+)
+
+
+async def _apply_additive_migrations(conn: object) -> None:
+    """Run additive column migrations on PostgreSQL; no-op elsewhere."""
+    from sqlalchemy import text
+
+    dialect = getattr(getattr(conn, "engine", None), "dialect", None)
+    dialect_name = getattr(dialect, "name", "")
+    if dialect_name != "postgresql":
+        return
+    for statement in _PG_MIGRATIONS:
+        try:
+            await conn.execute(text(statement))  # type: ignore[attr-defined]
+        except Exception as exc:  # pragma: no cover - depends on live DB
+            from app.core.logging import get_logger
+
+            get_logger(__name__).warning("Migration skipped (%s): %s", statement, exc)
 
 
 async def dispose_db() -> None:

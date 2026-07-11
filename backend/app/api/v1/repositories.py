@@ -21,6 +21,7 @@ from app.schemas.chat import (
     RepositoryCreateRequest,
     RepositoryResponse,
 )
+from app.services.conversation_service import ConversationService
 from app.services.repository_service import RepositoryService
 
 logger = get_logger(__name__)
@@ -132,9 +133,22 @@ async def repository_chat(
     llm: LLMDep,
     current_user: CurrentUserDep,
 ) -> Answer:
-    """Chat over one of the current user's indexed repositories."""
+    """Chat over one of the current user's indexed repositories and persist the turn."""
     repo = await session.get(Repository, repository_id)
     if repo is None or repo.user_id != current_user.id:
         raise NotFoundError(f"Repository {repository_id} not found")
     service = RepositoryService(rag, llm)
-    return await service.answer(repository_id, req.question)
+    answer = await service.answer(repository_id, req.question)
+
+    convo = ConversationService(session)
+    answer.conversation_id = await convo.record_turn(
+        user_id=current_user.id,
+        conversation_id=req.conversation_id,
+        kind="repo",
+        question=req.question,
+        answer_text=answer.text,
+        citations=answer.citations,
+        collection=repo.collection,
+        repository_id=repository_id,
+    )
+    return answer

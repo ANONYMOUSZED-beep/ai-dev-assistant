@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends
 from app.api.v1 import (
     auth,
     chat,
+    conversations,
     debug,
     documents,
     health,
@@ -29,5 +30,5 @@ api_router.include_router(auth.router)
 
 # Protected: require a valid JWT and apply rate limiting.
 _guarded = [Depends(get_current_user), Depends(enforce_rate_limit)]
-for feature in (chat, documents, repositories, search, debug, pair):
+for feature in (chat, conversations, documents, repositories, search, debug, pair):
     api_router.include_router(feature.router, dependencies=_guarded)

@@ -34,10 +34,23 @@ def format_context(chunks: list[RetrievedChunk]) -> str:
     return "\n\n".join(blocks)
 
 
+_REPO_REDIRECT_RULE = (
+    "This is the Documentation chat, grounded in the selected documentation library. "
+    "If the user is instead asking about their own uploaded/indexed repository or a "
+    "specific personal codebase (for example: 'my repo', 'this project', a particular "
+    "file or function in their code, or why their own code behaves a certain way), do "
+    "not guess from the documentation. Instead, politely and warmly let them know this "
+    "is the Documentation chat and gently suggest they switch to the 'Repo' chat tab "
+    "and select their repository to get accurate, code-specific answers. Keep that "
+    "redirect brief and friendly, and still offer to help with any general "
+    "documentation question."
+)
+
+
 def build_doc_qa_messages(question: str, chunks: list[RetrievedChunk]) -> list[LLMMessage]:
     system = (
         "You are an expert software engineering assistant answering questions using "
-        "official documentation. " + _CITATION_RULES
+        "official documentation. " + _CITATION_RULES + " " + _REPO_REDIRECT_RULE
     )
     user = (
         f"Context:\n{format_context(chunks)}\n\n"

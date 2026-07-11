@@ -174,14 +174,41 @@ async def test_delete_collection_clears_index(tmp_path) -> None:
 async def test_full_request_path_with_real_pipeline(tmp_path) -> None:
     """Drive the API with the real pipeline + a fake LLM: ingest, then chat, and
     assert the answer's citations came from genuine retrieval."""
+    from collections.abc import AsyncIterator
+
     from app.core.deps import get_current_user
+    from app.db.base import Base
     from app.db.models import User
+    from app.db.session import get_session
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+    from sqlalchemy.pool import StaticPool
 
     app.state.rag_pipeline = _build_pipeline(tmp_path)
     app.state.llm_provider = FakeLLM()
     app.dependency_overrides[get_current_user] = lambda: User(
         id="test-user", username="tester", password_hash=""
     )
+
+    # In-memory DB so the chat endpoint can persist the conversation turn.
+    engine = create_async_engine(
+        "sqlite+aiosqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
+
+    async def _override_get_session() -> AsyncIterator:
+        async with sessionmaker() as session:
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+
+    app.dependency_overrides[get_session] = _override_get_session
 
     transport = ASGITransport(app=app)
     try:
@@ -209,3 +236,5 @@ async def test_full_request_path_with_real_pipeline(tmp_path) -> None:
             assert any("FastAPI" in c["title"] for c in body["citations"])
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+        app.dependency_overrides.pop(get_session, None)
+        await engine.dispose()

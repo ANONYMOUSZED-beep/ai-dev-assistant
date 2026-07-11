@@ -88,12 +88,25 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    # Owner — conversations are private to the user who created them.
+    user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=True
+    )
+    # Which surface produced this chat: docs | repo | debug | pair.
+    kind: Mapped[str] = mapped_column(String(16), default="docs", index=True)
     title: Mapped[str | None] = mapped_column(String(512), nullable=True)
     collection: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # For repo chats: the repository this conversation is about.
+    repository_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now
+    )
 
     messages: Mapped[list[Message]] = relationship(
-        back_populates="conversation", cascade="all, delete-orphan"
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        order_by="Message.created_at",
     )
 
 
