@@ -11,11 +11,19 @@ import CodeViewer from "@/components/CodeViewer";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 import { useChat } from "@/hooks/useChat";
-import { createRepository, deleteRepository, listRepositories } from "@/lib/api";
+import {
+  createRepository,
+  deleteConversation,
+  deleteRepository,
+  getConversation,
+  listConversations,
+  listRepositories,
+} from "@/lib/api";
 import { citationToSource } from "@/lib/lang";
 import type {
   ChatMode,
   Citation,
+  ConversationSummary,
   IndexStatus,
   RepositoryResponse,
   ViewerSource,
@@ -40,6 +48,9 @@ function Workspace() {
   );
   const [viewerSource, setViewerSource] = useState<ViewerSource | null>(null);
   const [repoFiles, setRepoFiles] = useState<Record<string, ViewerSource[]>>({});
+
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [conversationsLoading, setConversationsLoading] = useState(true);
 
   // Refs to read current values inside stable callbacks without stale closures.
   const modeRef = useRef(mode);
@@ -76,7 +87,66 @@ function Workspace() {
     }
   }, []);
 
-  const chat = useChat({ onCitations: handleCitations });
+  const refreshConversations = useCallback(async () => {
+    try {
+      const list = await listConversations();
+      setConversations(list);
+    } catch {
+      // Backend may be unavailable; keep the current list.
+    } finally {
+      setConversationsLoading(false);
+    }
+  }, []);
+
+  const chat = useChat({
+    onCitations: handleCitations,
+    onTurnPersisted: () => {
+      void refreshConversations();
+    },
+  });
+
+  // Load chat history on mount.
+  useEffect(() => {
+    void refreshConversations();
+  }, [refreshConversations]);
+
+  // Switching mode starts a fresh conversation for that surface.
+  const handleModeChange = useCallback(
+    (next: ChatMode) => {
+      setMode(next);
+      chat.newChat();
+    },
+    [chat],
+  );
+
+  const handleSelectConversation = useCallback(
+    async (summary: ConversationSummary) => {
+      try {
+        const detail = await getConversation(summary.id);
+        setMode(summary.kind as ChatMode);
+        if (summary.kind === "repo" && summary.repository_id) {
+          setSelectedRepoId(summary.repository_id);
+        }
+        chat.loadConversation(detail);
+      } catch {
+        // Ignore load failures; the conversation may have been deleted.
+      }
+    },
+    [chat],
+  );
+
+  const handleDeleteConversation = useCallback(
+    async (id: string) => {
+      try {
+        await deleteConversation(id);
+      } catch {
+        return;
+      }
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      if (chat.conversationId === id) chat.newChat();
+    },
+    [chat],
+  );
 
   const refreshRepositories = useCallback(async () => {
     try {
@@ -162,7 +232,7 @@ function Workspace() {
       <div className="app-grid flex min-h-0 flex-1 gap-3 px-3 pb-3">
         {/* Mode rail */}
         <div className="panel-card flex w-16 shrink-0 overflow-hidden">
-          <ActivityBar mode={mode} onModeChange={setMode} />
+          <ActivityBar mode={mode} onModeChange={handleModeChange} />
         </div>
 
         {/* Explorer (collapsible) */}
@@ -184,6 +254,12 @@ function Workspace() {
               onSelectRepo={setSelectedRepoId}
               onDeleteRepo={handleDeleteRepo}
               onOpenFile={handleOpenFile}
+              conversations={conversations}
+              activeConversationId={chat.conversationId}
+              conversationsLoading={conversationsLoading}
+              onSelectConversation={handleSelectConversation}
+              onNewChat={chat.newChat}
+              onDeleteConversation={handleDeleteConversation}
             />
           </div>
         </div>

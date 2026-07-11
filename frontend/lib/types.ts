@@ -119,6 +119,32 @@ export interface PairRequest {
 
 export type ChatMode = "docs" | "repo" | "search" | "debug" | "pair";
 
+// Persisted chat history. `kind` drives the type badge in the sidebar.
+export type ConversationKind = "docs" | "repo" | "debug" | "pair";
+
+export interface ConversationSummary {
+  id: string;
+  kind: ConversationKind;
+  title: string | null;
+  collection: string | null;
+  repository_id: string | null;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StoredMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  citations: Citation[];
+  created_at: string;
+}
+
+export interface ConversationDetail extends ConversationSummary {
+  messages: StoredMessage[];
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";

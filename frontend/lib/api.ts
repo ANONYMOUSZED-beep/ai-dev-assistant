@@ -6,6 +6,9 @@ import type {
   CodeSearchRequest,
   CodeSearchResponse,
   Citation,
+  ConversationDetail,
+  ConversationKind,
+  ConversationSummary,
   DebugRequest,
   IngestRequest,
   IngestResponse,
@@ -124,6 +127,7 @@ export function chat(req: ChatRequest): Promise<Answer> {
 }
 
 export interface StreamHandlers {
+  onMeta?: (meta: { conversation_id: string }) => void;
   onCitations?: (citations: Citation[]) => void;
   onToken?: (token: string) => void;
   onDone?: () => void;
@@ -189,6 +193,15 @@ export async function chatStream(
     const data = dataLines.join("\n");
 
     switch (eventName) {
+      case "meta": {
+        try {
+          const parsed = JSON.parse(data) as { conversation_id: string };
+          handlers.onMeta?.(parsed);
+        } catch {
+          // Ignore malformed meta payloads.
+        }
+        break;
+      }
       case "citations": {
         try {
           const parsed = JSON.parse(data) as Citation[];
@@ -334,6 +347,39 @@ export function debugError(req: DebugRequest): Promise<Answer> {
 // ── Pair programmer ───────────────────────────────────────────────
 export function pairProgram(req: PairRequest): Promise<Answer> {
   return request<Answer>("/pair", jsonBody(req));
+}
+
+// ── Conversations (chat history) ──────────────────────────────────
+export function listConversations(
+  kind?: ConversationKind,
+): Promise<ConversationSummary[]> {
+  const query = kind ? `?kind=${encodeURIComponent(kind)}` : "";
+  return request<ConversationSummary[]>(`/conversations${query}`, {
+    method: "GET",
+  });
+}
+
+export function getConversation(id: string): Promise<ConversationDetail> {
+  return request<ConversationDetail>(
+    `/conversations/${encodeURIComponent(id)}`,
+    { method: "GET" },
+  );
+}
+
+export function renameConversation(
+  id: string,
+  title: string,
+): Promise<ConversationSummary> {
+  return request<ConversationSummary>(
+    `/conversations/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: JSON.stringify({ title }) },
+  );
+}
+
+export function deleteConversation(id: string): Promise<void> {
+  return request<void>(`/conversations/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
 }
 
 // ── Auth ──────────────────────────────────────────────────────────

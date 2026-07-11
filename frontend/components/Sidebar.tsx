@@ -2,7 +2,12 @@
 
 import { Boxes } from "lucide-react";
 
-import type { RepositoryResponse, ViewerSource } from "@/lib/types";
+import type {
+  ConversationSummary,
+  RepositoryResponse,
+  ViewerSource,
+} from "@/lib/types";
+import ChatHistory from "./ChatHistory";
 import CollectionSelector from "./CollectionSelector";
 import RepositoryExplorer from "./RepositoryExplorer";
 
@@ -18,6 +23,12 @@ interface SidebarProps {
   onSelectRepo: (id: string) => void;
   onDeleteRepo: (id: string) => void;
   onOpenFile: (source: ViewerSource) => void;
+  conversations: ConversationSummary[];
+  activeConversationId: string | null;
+  conversationsLoading: boolean;
+  onSelectConversation: (conversation: ConversationSummary) => void;
+  onNewChat: () => void;
+  onDeleteConversation: (id: string) => void;
 }
 
 export default function Sidebar({
@@ -32,6 +43,12 @@ export default function Sidebar({
   onSelectRepo,
   onDeleteRepo,
   onOpenFile,
+  conversations,
+  activeConversationId,
+  conversationsLoading,
+  onSelectConversation,
+  onNewChat,
+  onDeleteConversation,
 }: SidebarProps) {
   return (
     <aside
@@ -49,6 +66,15 @@ export default function Sidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        <ChatHistory
+          conversations={conversations}
+          activeId={activeConversationId}
+          loading={conversationsLoading}
+          onSelect={onSelectConversation}
+          onNew={onNewChat}
+          onDelete={onDeleteConversation}
+        />
+        <div className="my-1 border-t border-ide-border" />
         <RepositoryExplorer
           repositories={repositories}
           selectedRepoId={selectedRepoId}

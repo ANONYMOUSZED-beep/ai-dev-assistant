@@ -15,6 +15,7 @@ import type {
   ChatMessage,
   Citation,
   CodeSearchHit,
+  ConversationDetail,
   DebugRequest,
   PairRequest,
 } from "@/lib/types";
@@ -58,12 +59,22 @@ function hitsToMarkdown(query: string, hits: CodeSearchHit[]): string {
 export interface UseChatOptions {
   // Called whenever an assistant message produces citations.
   onCitations?: (citations: Citation[]) => void;
+  // Called after a turn is persisted (so callers can refresh the history list).
+  onTurnPersisted?: (conversationId: string | null) => void;
 }
 
-export function useChat({ onCitations }: UseChatOptions = {}) {
+export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isBusy, setIsBusy] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // Mirror of conversationId for use inside stable callbacks without stale closures.
+  const conversationIdRef = useRef<string | null>(null);
+
+  const applyConversationId = useCallback((id: string | null) => {
+    conversationIdRef.current = id;
+    setConversationId(id);
+  }, []);
 
   const updateMessage = useCallback(
     (id: string, patch: Partial<ChatMessage>) => {
@@ -85,6 +96,32 @@ export function useChat({ onCitations }: UseChatOptions = {}) {
     setMessages([]);
     onCitations?.([]);
   }, [onCitations]);
+
+  // Start a brand-new conversation (keeps current mode).
+  const newChat = useCallback(() => {
+    applyConversationId(null);
+    setMessages([]);
+    onCitations?.([]);
+  }, [applyConversationId, onCitations]);
+
+  // Load a previously saved conversation into the panel.
+  const loadConversation = useCallback(
+    (detail: ConversationDetail) => {
+      applyConversationId(detail.id);
+      const loaded: ChatMessage[] = detail.messages.map((m) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        citations: m.citations ?? [],
+      }));
+      setMessages(loaded);
+      const lastAssistant = [...loaded]
+        .reverse()
+        .find((m) => m.role === "assistant");
+      onCitations?.(lastAssistant?.citations ?? []);
+    },
+    [applyConversationId, onCitations],
+  );
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -113,9 +150,15 @@ export function useChat({ onCitations }: UseChatOptions = {}) {
 
       let acc = "";
       await chatStream(
-        { question, collection, stream: true },
+        {
+          question,
+          collection,
+          stream: true,
+          conversation_id: conversationIdRef.current,
+        },
         {
           signal: controller.signal,
+          onMeta: (meta) => applyConversationId(meta.conversation_id),
           onCitations: (citations) => {
             updateMessage(assistantId, { citations });
             onCitations?.(citations);
@@ -136,16 +179,14 @@ export function useChat({ onCitations }: UseChatOptions = {}) {
       updateMessage(assistantId, { pending: false });
       setIsBusy(false);
       abortRef.current = null;
+      onTurnPersisted?.(conversationIdRef.current);
     },
-    [onCitations, pushUser, updateMessage],
+    [applyConversationId, onCitations, onTurnPersisted, pushUser, updateMessage],
   );
 
   // Generic non-streaming Answer-producing request.
   const runAnswer = useCallback(
-    async (
-      userContent: string,
-      run: () => Promise<Answer>,
-    ) => {
+    async (userContent: string, run: () => Promise<Answer>) => {
       pushUser(userContent);
       const assistantId = uid();
       setMessages((prev) => [
@@ -169,6 +210,8 @@ export function useChat({ onCitations }: UseChatOptions = {}) {
           pending: false,
         });
         onCitations?.(answer.citations);
+        if (answer.conversation_id) applyConversationId(answer.conversation_id);
+        onTurnPersisted?.(answer.conversation_id ?? conversationIdRef.current);
       } catch (err) {
         const message =
           err instanceof ApiError || err instanceof Error
@@ -183,12 +226,17 @@ export function useChat({ onCitations }: UseChatOptions = {}) {
         setIsBusy(false);
       }
     },
-    [onCitations, pushUser, updateMessage],
+    [applyConversationId, onCitations, onTurnPersisted, pushUser, updateMessage],
   );
 
   const sendRepo = useCallback(
     (question: string, repositoryId: string) =>
-      runAnswer(question, () => repositoryChat(repositoryId, { question })),
+      runAnswer(question, () =>
+        repositoryChat(repositoryId, {
+          question,
+          conversation_id: conversationIdRef.current,
+        }),
+      ),
     [runAnswer],
   );
 
@@ -258,7 +306,10 @@ export function useChat({ onCitations }: UseChatOptions = {}) {
   return {
     messages,
     isBusy,
+    conversationId,
     clear,
+    newChat,
+    loadConversation,
     stop,
     sendDocs,
     sendRepo,
