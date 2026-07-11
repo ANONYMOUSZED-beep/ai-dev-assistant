@@ -4,6 +4,7 @@ import { Boxes } from "lucide-react";
 
 import type {
   ConversationSummary,
+  DocCollection,
   RepositoryResponse,
   ViewerSource,
 } from "@/lib/types";
@@ -14,6 +15,9 @@ import RepositoryExplorer from "./RepositoryExplorer";
 interface SidebarProps {
   collection: string;
   onCollectionChange: (collection: string) => void;
+  customCollections: DocCollection[];
+  onIngested: (collection: string) => void;
+  onRemoveCustomCollection: (id: string) => void;
   repositories: RepositoryResponse[];
   selectedRepoId: string | null;
   connecting: boolean;
@@ -34,6 +38,9 @@ interface SidebarProps {
 export default function Sidebar({
   collection,
   onCollectionChange,
+  customCollections,
+  onIngested,
+  onRemoveCustomCollection,
   repositories,
   selectedRepoId,
   connecting,
@@ -87,7 +94,13 @@ export default function Sidebar({
           onOpenFile={onOpenFile}
         />
         <div className="my-1 border-t border-ide-border" />
-        <CollectionSelector value={collection} onChange={onCollectionChange} />
+        <CollectionSelector
+          value={collection}
+          onChange={onCollectionChange}
+          customCollections={customCollections}
+          onIngested={onIngested}
+          onRemoveCustom={onRemoveCustomCollection}
+        />
       </div>
     </aside>
   );

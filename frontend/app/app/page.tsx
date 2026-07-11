@@ -20,10 +20,16 @@ import {
   listRepositories,
 } from "@/lib/api";
 import { citationToSource } from "@/lib/lang";
+import {
+  addCustomCollection,
+  loadCustomCollections,
+  removeCustomCollection,
+} from "@/lib/customCollections";
 import type {
   ChatMode,
   Citation,
   ConversationSummary,
+  DocCollection,
   IndexStatus,
   RepositoryResponse,
   ViewerSource,
@@ -51,6 +57,29 @@ function Workspace() {
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [conversationsLoading, setConversationsLoading] = useState(true);
+
+  const [customCollections, setCustomCollections] = useState<DocCollection[]>(
+    [],
+  );
+
+  // Load persisted custom collections (from previous uploads) on mount.
+  useEffect(() => {
+    setCustomCollections(loadCustomCollections());
+  }, []);
+
+  // After a successful ingest: remember any new collection and make it active.
+  const handleIngested = useCallback((ingestedCollection: string) => {
+    setCustomCollections(addCustomCollection(ingestedCollection));
+    setCollection(ingestedCollection);
+  }, []);
+
+  const handleRemoveCustomCollection = useCallback(
+    (id: string) => {
+      setCustomCollections(removeCustomCollection(id));
+      setCollection((cur) => (cur === id ? "python" : cur));
+    },
+    [],
+  );
 
   // Refs to read current values inside stable callbacks without stale closures.
   const modeRef = useRef(mode);
@@ -245,6 +274,9 @@ function Workspace() {
             <Sidebar
               collection={collection}
               onCollectionChange={setCollection}
+              customCollections={customCollections}
+              onIngested={handleIngested}
+              onRemoveCustomCollection={handleRemoveCustomCollection}
               repositories={repositories}
               selectedRepoId={selectedRepoId}
               connecting={connecting}
