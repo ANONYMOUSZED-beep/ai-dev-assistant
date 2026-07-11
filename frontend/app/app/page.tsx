@@ -287,11 +287,11 @@ function Workspace() {
         {/* Source viewer + citations (collapsible) */}
         <div
           className={`panel-collapse shrink-0 overflow-hidden ${
-            rightOpen ? "w-[420px] opacity-100" : "w-0 opacity-0"
+            rightOpen ? "w-[340px] opacity-100" : "w-0 opacity-0"
           }`}
         >
           <aside
-            className="panel-card flex h-full w-[420px] flex-col overflow-hidden"
+            className="panel-card flex h-full w-[340px] flex-col overflow-hidden"
             aria-label="Source viewer and citations"
           >
             <div className="min-h-0 flex-[3] border-b border-ide-border">
