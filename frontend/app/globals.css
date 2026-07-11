@@ -697,37 +697,27 @@ body {
 
 .rivr-shell .doc-card {
   position: absolute;
-  right: 0;
-  bottom: 0;
+  right: 24px;
+  bottom: 24px;
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 32px 24px 24px 56px;
-  background: var(--page-bg);
-  border-top-left-radius: 56px;
+  gap: 20px;
+  padding: 20px 26px;
+  /* Clean self-contained card: reads correctly on any background (no reliance
+     on the hero scene behind it), with a soft glass look. */
+  background: rgba(255, 255, 255, 0.82);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(30, 50, 90, 0.08);
+  border-radius: 20px;
   color: rgba(30, 50, 90, 0.95);
-  box-shadow: 0 -2px 0 rgba(255, 255, 255, 0.3);
+  box-shadow: 0 14px 34px rgba(30, 50, 90, 0.14);
   transition: transform 0.2s ease;
 }
 
+/* The old concave "notch" corners were background-dependent; no longer used. */
 .rivr-shell .doc-notch {
-  position: absolute;
-  display: block;
-  width: 56px;
-  height: 56px;
-  pointer-events: none;
-}
-
-.rivr-shell .doc-notch.top {
-  top: -56px;
-  right: 0;
-  background: radial-gradient(circle at bottom left, transparent 39px, var(--page-bg) 40px);
-}
-
-.rivr-shell .doc-notch.side {
-  left: -56px;
-  bottom: 0;
-  background: radial-gradient(circle at top right, transparent 39px, var(--page-bg) 40px);
+  display: none;
 }
 
 .rivr-shell .doc-icon.large {
@@ -775,22 +765,10 @@ body {
   }
   .rivr-shell .doc-card {
     gap: 14px;
-    padding: 24px 18px 18px 36px;
-    border-top-left-radius: 34px;
-  }
-  .rivr-shell .doc-notch,
-  .rivr-shell .doc-notch.top,
-  .rivr-shell .doc-notch.side {
-    width: 34px;
-    height: 34px;
-  }
-  .rivr-shell .doc-notch.top {
-    top: -34px;
-    background: radial-gradient(circle at bottom left, transparent 23px, var(--page-bg) 24px);
-  }
-  .rivr-shell .doc-notch.side {
-    left: -34px;
-    background: radial-gradient(circle at top right, transparent 23px, var(--page-bg) 24px);
+    padding: 16px 18px;
+    right: 16px;
+    bottom: 16px;
+    border-radius: 16px;
   }
   .rivr-shell .doc-icon.large {
     width: 44px;

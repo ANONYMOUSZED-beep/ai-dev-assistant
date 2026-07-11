@@ -86,8 +86,6 @@ export default function LandingPage() {
             </div>
 
             <Link className="doc-card" href="#docs">
-              <span className="doc-notch top" />
-              <span className="doc-notch side" />
               <span className="doc-icon icon-circle large">
                 <ArrowIcon />
               </span>
