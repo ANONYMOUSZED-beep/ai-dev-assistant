@@ -30,6 +30,11 @@ _TABLE = "vector_chunks"
 # a stalled connection would block the request until the platform proxy drops it.
 _CONNECT_TIMEOUT_SECONDS = 15
 _STATEMENT_TIMEOUT_MS = 30000
+# Managed serverless Postgres (e.g. Neon) drops idle connections and can suspend the
+# compute between requests. A pooled connection may therefore be dead by the time we
+# check it out ("SSL connection has been closed unexpectedly"). We validate each
+# connection on checkout and transparently replace dead ones, retrying a few times.
+_MAX_CONN_ATTEMPTS = 3
 
 
 def _to_vector_literal(vector: list[float]) -> str:
@@ -64,14 +69,56 @@ class PgVectorStore:
                     # connection handshake on startup options it doesn't recognise. We
                     # set ``statement_timeout`` per session with a plain ``SET`` after
                     # checkout instead (see ``_checkout``).
+                    #
+                    # TCP keepalives keep the socket alive through idle periods (e.g.
+                    # while the pipeline embeds thousands of chunks before inserting)
+                    # so the managed provider is less likely to reap the connection.
                     self._pool = ThreadedConnectionPool(
                         1,
                         8,
                         dsn=self._dsn,
                         connect_timeout=_CONNECT_TIMEOUT_SECONDS,
+                        keepalives=1,
+                        keepalives_idle=30,
+                        keepalives_interval=10,
+                        keepalives_count=5,
                     )
                     logger.info("pgvector: connection pool ready")
         return self._pool
+
+    def _acquire_live_conn(self, pool: ThreadedConnectionPool) -> Any:
+        """Return a validated connection, discarding and replacing dead ones.
+
+        The psycopg2 pool does not health-check connections, so a connection the
+        managed DB closed while idle is handed back as-is and only fails on first use.
+        We probe with ``SELECT 1`` (and set the session ``statement_timeout``) here; on
+        failure the dead connection is closed/removed from the pool and we retry with a
+        fresh one.
+        """
+        from psycopg2 import InterfaceError, OperationalError
+
+        last_exc: Exception | None = None
+        for attempt in range(1, _MAX_CONN_ATTEMPTS + 1):
+            conn = pool.getconn()
+            try:
+                conn.autocommit = True
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+                    cur.execute(f"SET statement_timeout = {int(_STATEMENT_TIMEOUT_MS)}")
+                return conn
+            except (OperationalError, InterfaceError) as exc:
+                last_exc = exc
+                logger.warning(
+                    "pgvector: discarding dead connection (attempt %d/%d): %s",
+                    attempt,
+                    _MAX_CONN_ATTEMPTS,
+                    exc,
+                )
+                # close=True removes the broken connection from the pool entirely.
+                with suppress(Exception):
+                    pool.putconn(conn, close=True)
+        assert last_exc is not None
+        raise last_exc
 
     @contextmanager
     def _checkout(self, *, autocommit: bool = False) -> Iterator[Any]:
@@ -82,11 +129,10 @@ class PgVectorStore:
         statement can't block a request indefinitely. ``autocommit`` is used for DDL so
         ``CREATE EXTENSION``/``CREATE TABLE`` don't sit inside an open transaction.
         """
-        conn = self._get_pool().getconn()
+        pool = self._get_pool()
+        # Acquire a validated, live connection (statement_timeout already set).
+        conn = self._acquire_live_conn(pool)
         try:
-            conn.autocommit = True
-            with conn.cursor() as cur:
-                cur.execute(f"SET statement_timeout = {int(_STATEMENT_TIMEOUT_MS)}")
             conn.autocommit = autocommit
             yield conn
         finally:
