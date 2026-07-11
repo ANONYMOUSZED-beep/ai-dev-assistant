@@ -94,7 +94,7 @@ class RagPipeline:
         call can exceed the timeout and drop the connection. Warming them at startup in
         the background moves that cost off the request path.
         """
-        for component in (self._embedder, self._reranker):
+        for component in (self._embedder, self._reranker, self._store):
             warmup = getattr(component, "warmup", None)
             if callable(warmup):
                 await asyncio.to_thread(warmup)
