@@ -43,7 +43,9 @@ class PgVectorStore:
     def __init__(self, dsn: str) -> None:
         self._dsn = dsn
         self._pool: ThreadedConnectionPool | None = None
-        self._lock = threading.Lock()
+        # Reentrant: _ensure_schema() holds this lock and then calls _get_pool(),
+        # which re-acquires it. A plain Lock would self-deadlock on first use.
+        self._lock = threading.RLock()
         self._ready = False
 
     # ── Pool / schema ────────────────────────────────────────────
