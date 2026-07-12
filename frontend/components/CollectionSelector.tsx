@@ -117,7 +117,7 @@ export default function CollectionSelector({
       ) : null}
 
       <p className="mt-2 text-[0.7rem] text-ide-muted">
-        Active collection:{" "}
+        Active knowledge base:{" "}
         <span className="font-mono text-ide-text">{value}</span>
       </p>
     </div>

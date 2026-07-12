@@ -1,6 +1,6 @@
 "use client";
 
-import { LogIn, Terminal, UserPlus } from "lucide-react";
+import { Eye, EyeOff, LogIn, Terminal, UserPlus } from "lucide-react";
 import {
   createContext,
   type ReactNode,
@@ -11,7 +11,6 @@ import {
 } from "react";
 
 import {
-  ApiError,
   clearToken,
   type CurrentUser,
   fetchMe,
@@ -20,6 +19,7 @@ import {
   register,
   setToken,
 } from "@/lib/api";
+import { humanizeError } from "@/lib/errors";
 
 interface AuthContextValue {
   user: CurrentUser | null;
@@ -96,11 +96,16 @@ function AuthScreen({
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mode === "register" && password.length < 6) {
+      setError("Please choose a password with at least 6 characters.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -110,11 +115,7 @@ function AuthScreen({
       const me = await fetchMe();
       onAuthenticated(me);
     } catch (err) {
-      const msg =
-        err instanceof ApiError
-          ? err.message
-          : "Something went wrong. Please try again.";
-      setError(msg);
+      setError(humanizeError(err));
     } finally {
       setBusy(false);
     }
@@ -136,7 +137,7 @@ function AuthScreen({
         <p className="mt-1 text-sm text-[#5e6470]">
           {mode === "login"
             ? "Sign in to access your workspace."
-            : "Your repositories stay private to your account."}
+            : "A free account keeps your documents and chats private to you."}
         </p>
 
         <form onSubmit={submit} className="mt-6 space-y-3">
@@ -158,16 +159,33 @@ function AuthScreen({
             <label className="mb-1 block text-xs font-medium text-[#5e6470]">
               Password
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
-              required
-              minLength={6}
-              className="w-full rounded-lg border border-[#d8dce2] bg-white px-3 py-2 text-sm text-[#1e325a] outline-none focus:border-[#24406e] focus:ring-1 focus:ring-[#24406e]"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={
+                  mode === "login" ? "current-password" : "new-password"
+                }
+                required
+                minLength={6}
+                className="w-full rounded-lg border border-[#d8dce2] bg-white px-3 py-2 pr-10 text-sm text-[#1e325a] outline-none focus:border-[#24406e] focus:ring-1 focus:ring-[#24406e]"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#8a91a0] hover:text-[#1e325a]"
+              >
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+            {mode === "register" ? (
+              <p className="mt-1 text-[0.7rem] text-[#8a91a0]">
+                At least 6 characters.
+              </p>
+            ) : null}
           </div>
 
           {error ? (

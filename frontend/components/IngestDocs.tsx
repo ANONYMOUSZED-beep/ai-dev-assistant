@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import { ApiError, ingestDocument, uploadDocument } from "@/lib/api";
+import { ingestDocument, uploadDocument } from "@/lib/api";
+import { humanizeError } from "@/lib/errors";
 
 interface IngestDocsProps {
   collection: string;
@@ -90,17 +91,15 @@ export default function IngestDocs({ collection, onIngested }: IngestDocsProps) 
         );
         chunks = res.chunks_indexed;
       }
-      setResult(`Indexed ${chunks} chunk(s) into "${target}".`);
+      setResult(
+        `Added! Learned ${chunks} section(s) from your document — it's now in "${target}".`,
+      );
       setText("");
       setUrl("");
       setFile(null);
       onIngested?.(target);
     } catch (err) {
-      setError(
-        err instanceof ApiError || err instanceof Error
-          ? err.message
-          : String(err),
-      );
+      setError(humanizeError(err));
     } finally {
       setBusy(false);
     }
@@ -149,18 +148,19 @@ export default function IngestDocs({ collection, onIngested }: IngestDocsProps) 
                   htmlFor="ingest-collection"
                   className="mb-1 block text-[0.7rem] font-semibold uppercase tracking-wide text-ide-muted"
                 >
-                  Collection
+                  Knowledge base
                 </label>
                 <input
                   id="ingest-collection"
                   type="text"
                   value={coll}
                   onChange={(e) => setColl(e.target.value)}
-                  placeholder="e.g. python, my-project-docs"
+                  placeholder="e.g. Company Handbook, Course Notes"
                   className="w-full rounded-md border border-ide-border bg-ide-bg px-2.5 py-1.5 text-sm text-ide-text placeholder:text-ide-muted focus:border-ide-accent focus:outline-none"
                 />
                 <p className="mt-1 text-[0.7rem] text-ide-muted">
-                  Answers in Docs Chat are grounded in the active collection.
+                  Give this set of documents a name. Docs Chat will answer using
+                  whatever you add here.
                 </p>
               </div>
 
@@ -271,7 +271,7 @@ export default function IngestDocs({ collection, onIngested }: IngestDocsProps) 
                 ) : (
                   <Plus size={14} />
                 )}
-                Add to collection
+                {busy ? "Adding…" : "Add documents"}
               </button>
             </div>
           </div>

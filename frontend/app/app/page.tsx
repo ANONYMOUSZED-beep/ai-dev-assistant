@@ -10,6 +10,7 @@ import CitationsList from "@/components/CitationsList";
 import CodeViewer from "@/components/CodeViewer";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
+import WelcomeGuide from "@/components/WelcomeGuide";
 import { useChat } from "@/hooks/useChat";
 import {
   createRepository,
@@ -20,6 +21,7 @@ import {
   listRepositories,
 } from "@/lib/api";
 import { citationToSource } from "@/lib/lang";
+import { humanizeError } from "@/lib/errors";
 import {
   addCustomCollection,
   loadCustomCollections,
@@ -61,6 +63,28 @@ function Workspace() {
   const [customCollections, setCustomCollections] = useState<DocCollection[]>(
     [],
   );
+
+  const [guideOpen, setGuideOpen] = useState(false);
+
+  // Show the welcome guide on the very first visit (per browser).
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem("rivr_onboarded") !== "1") {
+        setGuideOpen(true);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const dismissGuide = useCallback(() => {
+    setGuideOpen(false);
+    try {
+      window.localStorage.setItem("rivr_onboarded", "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   // Load persisted custom collections (from previous uploads) on mount.
   useEffect(() => {
@@ -213,7 +237,7 @@ function Workspace() {
           void refreshRepositories();
         }
       } catch (err) {
-        setConnectError(err instanceof Error ? err.message : String(err));
+        setConnectError(humanizeError(err));
       } finally {
         setConnecting(false);
       }
@@ -250,12 +274,22 @@ function Workspace() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-ide-bg">
+      <WelcomeGuide
+        open={guideOpen}
+        onClose={dismissGuide}
+        onPick={(pickedMode) => {
+          handleModeChange(pickedMode);
+          dismissGuide();
+        }}
+      />
+
       <TopBar
         mode={mode}
         sidebarOpen={sidebarOpen}
         rightOpen={rightOpen}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         onToggleRight={() => setRightOpen((v) => !v)}
+        onOpenGuide={() => setGuideOpen(true)}
       />
 
       <div className="app-grid flex min-h-0 flex-1 gap-3 px-3 pb-3">

@@ -4,6 +4,7 @@ import {
   Bug,
   FileText,
   GitBranch,
+  HelpCircle,
   LogOut,
   type LucideIcon,
   PanelLeft,
@@ -22,6 +23,7 @@ interface TopBarProps {
   rightOpen: boolean;
   onToggleSidebar: () => void;
   onToggleRight: () => void;
+  onOpenGuide: () => void;
 }
 
 const MODE_META: Record<ChatMode, { label: string; icon: LucideIcon; hint: string }> = {
@@ -38,6 +40,7 @@ export default function TopBar({
   rightOpen,
   onToggleSidebar,
   onToggleRight,
+  onOpenGuide,
 }: TopBarProps) {
   const meta = MODE_META[mode];
   const Icon = meta.icon;
@@ -80,6 +83,15 @@ export default function TopBar({
       </div>
 
       <div className="flex items-center gap-1">
+        <button
+          type="button"
+          aria-label="How to use this app"
+          title="How to use this app"
+          onClick={onOpenGuide}
+          className="rounded-lg p-2 text-ide-muted transition-colors hover:bg-ide-hover hover:text-ide-text focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent"
+        >
+          <HelpCircle size={18} />
+        </button>
         <button
           type="button"
           aria-label={rightOpen ? "Hide source & citations" : "Show source & citations"}

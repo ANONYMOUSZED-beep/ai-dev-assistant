@@ -2,6 +2,7 @@
 
 import {
   Bug,
+  Check,
   FileText,
   GitBranch,
   History,
@@ -9,7 +10,9 @@ import {
   Plus,
   Sparkles,
   Trash2,
+  X,
 } from "lucide-react";
+import { useState } from "react";
 
 import type { ConversationKind, ConversationSummary } from "@/lib/types";
 
@@ -70,6 +73,8 @@ export default function ChatHistory({
   onNew,
   onDelete,
 }: ChatHistoryProps) {
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
   return (
     <section aria-label="Chat history" className="px-3 pt-3">
       <div className="mb-2 flex items-center justify-between px-1">
@@ -117,15 +122,41 @@ export default function ChatHistory({
                       {c.title ?? "Untitled chat"}
                     </p>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(c.id)}
-                    aria-label="Delete conversation"
-                    title="Delete conversation"
-                    className="mt-0.5 rounded p-0.5 text-ide-muted opacity-0 transition-opacity hover:text-ide-danger group-hover:opacity-100"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  {confirmDeleteId === c.id ? (
+                    <div className="mt-0.5 flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onDelete(c.id);
+                          setConfirmDeleteId(null);
+                        }}
+                        aria-label="Confirm delete"
+                        title="Delete"
+                        className="rounded p-0.5 text-ide-danger hover:bg-ide-hover"
+                      >
+                        <Check size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(null)}
+                        aria-label="Cancel"
+                        title="Keep"
+                        className="rounded p-0.5 text-ide-muted hover:bg-ide-hover hover:text-ide-text"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteId(c.id)}
+                      aria-label="Delete conversation"
+                      title="Delete conversation"
+                      className="mt-0.5 rounded p-0.5 text-ide-muted opacity-0 transition-opacity hover:text-ide-danger group-hover:opacity-100"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
               </li>
             );

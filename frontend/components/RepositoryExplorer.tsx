@@ -2,6 +2,7 @@
 
 import {
   AlertCircle,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -12,6 +13,7 @@ import {
   Loader2,
   Plus,
   Trash2,
+  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -71,12 +73,12 @@ function StatusBadge({ status }: { status: IndexStatus }) {
     { label: string; className: string; icon: React.ReactNode }
   > = {
     pending: {
-      label: "Pending",
+      label: "Queued",
       className: "text-ide-warning",
       icon: <Loader2 size={11} className="animate-spin" />,
     },
     indexing: {
-      label: "Indexing",
+      label: "Reading…",
       className: "text-ide-accent",
       icon: <Loader2 size={11} className="animate-spin" />,
     },
@@ -203,6 +205,7 @@ export default function RepositoryExplorer({
 }: RepositoryExplorerProps) {
   const [url, setUrl] = useState("");
   const [branch, setBranch] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const tree = useMemo(() => buildTree(files), [files]);
   const selectedRepo = repositories.find((r) => r.id === selectedRepoId) ?? null;
@@ -293,23 +296,53 @@ export default function RepositoryExplorer({
                   <div className="mt-0.5 flex items-center gap-2 text-[0.65rem] text-ide-muted">
                     {repo.branch ? <span>{repo.branch}</span> : null}
                     <span>{repo.files_indexed} files</span>
-                    <span>{repo.chunks_indexed} chunks</span>
+                    <span>{repo.chunks_indexed} sections</span>
                   </div>
+                  {repo.status === "pending" || repo.status === "indexing" ? (
+                    <p className="mt-0.5 text-[0.65rem] text-ide-muted">
+                      Reading your project — this can take a minute.
+                    </p>
+                  ) : null}
                   {repo.error ? (
                     <p className="mt-0.5 text-[0.65rem] text-ide-danger">
-                      {repo.error}
+                      We couldn't finish reading this project. Please try again.
                     </p>
                   ) : null}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => onDelete(repo.id)}
-                  title="Remove repository"
-                  aria-label={`Remove ${name}`}
-                  className="absolute bottom-1.5 right-1.5 hidden rounded p-1 text-ide-muted transition-colors hover:bg-ide-hover hover:text-ide-danger focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent group-hover:block"
-                >
-                  <Trash2 size={12} />
-                </button>
+                {confirmDeleteId === repo.id ? (
+                  <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-md border border-ide-border bg-ide-panel px-1.5 py-0.5 shadow-sm">
+                    <span className="text-[0.6rem] text-ide-muted">Remove?</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onDelete(repo.id);
+                        setConfirmDeleteId(null);
+                      }}
+                      aria-label={`Confirm remove ${name}`}
+                      className="rounded p-0.5 text-ide-danger hover:bg-ide-hover"
+                    >
+                      <Check size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteId(null)}
+                      aria-label="Cancel"
+                      className="rounded p-0.5 text-ide-muted hover:bg-ide-hover hover:text-ide-text"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteId(repo.id)}
+                    title="Remove repository"
+                    aria-label={`Remove ${name}`}
+                    className="absolute bottom-1.5 right-1.5 hidden rounded p-1 text-ide-muted transition-colors hover:bg-ide-hover hover:text-ide-danger focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent group-hover:block"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
               </li>
             );
           })

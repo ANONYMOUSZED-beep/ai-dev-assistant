@@ -3,13 +3,13 @@
 import { useCallback, useRef, useState } from "react";
 
 import {
-  ApiError,
   chatStream,
   debugError,
   pairProgram,
   repositoryChat,
   searchCode,
 } from "@/lib/api";
+import { humanizeError } from "@/lib/errors";
 import type {
   Answer,
   ChatMessage,
@@ -169,7 +169,7 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
           },
           onError: (error) => {
             updateMessage(assistantId, {
-              content: acc || `Error: ${error.message}`,
+              content: acc || humanizeError(error),
               error: true,
               pending: false,
             });
@@ -213,12 +213,8 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
         if (answer.conversation_id) applyConversationId(answer.conversation_id);
         onTurnPersisted?.(answer.conversation_id ?? conversationIdRef.current);
       } catch (err) {
-        const message =
-          err instanceof ApiError || err instanceof Error
-            ? err.message
-            : String(err);
         updateMessage(assistantId, {
-          content: `Error: ${message}`,
+          content: humanizeError(err),
           error: true,
           pending: false,
         });
@@ -287,12 +283,8 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
         });
         onCitations?.(citations);
       } catch (err) {
-        const message =
-          err instanceof ApiError || err instanceof Error
-            ? err.message
-            : String(err);
         updateMessage(assistantId, {
-          content: `Error: ${message}`,
+          content: humanizeError(err),
           error: true,
           pending: false,
         });
