@@ -305,7 +305,7 @@ export default function RepositoryExplorer({
                   ) : null}
                   {repo.error ? (
                     <p className="mt-0.5 text-[0.65rem] text-ide-danger">
-                      We couldn't finish reading this project. Please try again.
+                      {"We couldn't finish reading this project. Please try again."}
                     </p>
                   ) : null}
                 </button>

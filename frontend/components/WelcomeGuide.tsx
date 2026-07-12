@@ -130,7 +130,7 @@ export default function WelcomeGuide({
             onClick={onClose}
             className="rounded-md px-4 py-1.5 text-xs font-medium text-ide-muted hover:bg-ide-hover hover:text-ide-text"
           >
-            I'll explore on my own
+            {"I'll explore on my own"}
           </button>
         </div>
       </div>
