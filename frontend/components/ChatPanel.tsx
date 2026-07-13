@@ -401,6 +401,37 @@ export default function ChatPanel({
         )}
       </div>
 
+      {(() => {
+        const last = messages[messages.length - 1];
+        const followUps =
+          !isBusy && last?.role === "assistant" ? (last.followUps ?? []) : [];
+        const canFollow =
+          (mode === "docs" || (mode === "repo" && repoReady && Boolean(selectedRepoId))) &&
+          followUps.length > 0;
+        if (!canFollow) return null;
+        const run = (q: string) => {
+          if (mode === "docs") onSendDocs(q, collection);
+          else if (mode === "repo" && selectedRepoId) onSendRepo(q, selectedRepoId);
+        };
+        return (
+          <div className="flex flex-wrap gap-1.5 border-t border-ide-border bg-ide-panel/60 px-3 pb-1.5 pt-2">
+            <span className="w-full text-[0.62rem] font-semibold uppercase tracking-wide text-ide-muted">
+              Suggested follow-ups
+            </span>
+            {followUps.map((q) => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => run(q)}
+                className="suggestion-chip rounded-full border border-ide-border bg-ide-bg px-3 py-1 text-xs text-ide-text transition-colors hover:border-ide-accent/50 hover:bg-ide-accent/5 focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
+
       <div className="border-t border-ide-border bg-ide-panel">
         <div key={mode} className="msg-in">
         {mode === "docs" ? (

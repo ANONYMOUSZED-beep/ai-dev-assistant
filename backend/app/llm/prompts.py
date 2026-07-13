@@ -126,6 +126,22 @@ _PAIR_INSTRUCTIONS: dict[PairAction, str] = {
 }
 
 
+def build_followups_messages(question: str, answer_text: str) -> list[LLMMessage]:
+    """Prompt the model to suggest short follow-up questions the user might ask next."""
+    system = (
+        "You suggest natural follow-up questions a user might ask next in a technical "
+        "chat. Suggest exactly 3 short questions, each on its own line, at most about 8 "
+        "words each. Do not number them, do not use bullets or quotes, and output ONLY "
+        "the questions with nothing else."
+    )
+    user = (
+        f"Original question: {question}\n\n"
+        f"Answer given:\n{answer_text}\n\n"
+        "Suggest 3 follow-up questions."
+    )
+    return [LLMMessage(role=Role.SYSTEM, content=system), LLMMessage(role=Role.USER, content=user)]
+
+
 def build_pair_messages(
     action: PairAction,
     code: str,

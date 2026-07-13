@@ -27,6 +27,7 @@ export interface Answer {
   model: string | null;
   provider: string | null;
   conversation_id: string | null;
+  follow_ups?: string[];
 }
 
 export interface ChatRequest {
@@ -154,6 +155,7 @@ export interface ChatMessage {
   provider?: string | null;
   pending?: boolean;
   error?: boolean;
+  followUps?: string[];
 }
 
 export interface DocCollection {

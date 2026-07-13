@@ -25,6 +25,7 @@ class Answer(BaseModel):
     model: str | None = None
     provider: str | None = None
     conversation_id: str | None = None
+    follow_ups: list[str] = Field(default_factory=list)
 
 
 # ── Document ingestion ───────────────────────────────────────────

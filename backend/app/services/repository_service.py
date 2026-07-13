@@ -27,6 +27,26 @@ def repo_collection(repository_id: str) -> str:
     return f"repo:{repository_id}"
 
 
+def _clean_follow_ups(text: str) -> list[str]:
+    """Parse raw model output into at most 3 clean follow-up questions.
+
+    Splits on newlines, strips leading bullets/numbers/punctuation and surrounding
+    quotes, drops empty lines, and caps the result at 3 items.
+    """
+    cleaned: list[str] = []
+    for line in text.splitlines():
+        item = line.strip()
+        # Strip leading bullets, numbering and punctuation (e.g. "1.", "-", "*", ")").
+        item = item.lstrip("-*•0123456789.)(] \t")
+        # Strip surrounding quotes.
+        item = item.strip().strip('"').strip("'").strip()
+        if item:
+            cleaned.append(item)
+        if len(cleaned) == 3:
+            break
+    return cleaned
+
+
 class RepositoryService:
     """Index repositories and answer questions grounded in their code."""
 
@@ -51,12 +71,25 @@ class RepositoryService:
             return Answer(text=_NO_CONTEXT_MESSAGE, citations=[])
         messages = prompts.build_repo_qa_messages(question, chunks)
         response = await self._llm.generate(messages)
-        return Answer(
+        answer = Answer(
             text=response.content,
             citations=build_citations(chunks),
             model=response.model,
             provider=response.provider,
         )
+        try:
+            answer.follow_ups = await self.follow_ups(question, response.content)
+        except Exception:  # noqa: BLE001 - follow-ups are best-effort, never break the answer
+            logger.exception("Follow-up generation failed")
+            answer.follow_ups = []
+        return answer
+
+    async def follow_ups(self, question: str, answer_text: str) -> list[str]:
+        """Suggest up to 3 short follow-up questions for the given Q&A."""
+        response = await self._llm.generate(
+            prompts.build_followups_messages(question, answer_text)
+        )
+        return _clean_follow_ups(response.content)
 
     async def retrieve_citations(self, repository_id: str, question: str) -> Answer:
         """Return citations only (used to enrich a streamed answer)."""

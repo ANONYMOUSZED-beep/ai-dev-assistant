@@ -130,6 +130,7 @@ export interface StreamHandlers {
   onMeta?: (meta: { conversation_id: string }) => void;
   onCitations?: (citations: Citation[]) => void;
   onToken?: (token: string) => void;
+  onFollowups?: (questions: string[]) => void;
   onDone?: () => void;
   onError?: (error: Error) => void;
   signal?: AbortSignal;
@@ -251,6 +252,15 @@ async function streamSSE(
       case "token":
         handlers.onToken?.(data);
         break;
+      case "followups": {
+        try {
+          const parsed = JSON.parse(data) as string[];
+          handlers.onFollowups?.(parsed);
+        } catch {
+          // Ignore malformed follow-up payloads.
+        }
+        break;
+      }
       case "done":
         handlers.onDone?.();
         break;

@@ -157,6 +157,9 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
           acc += token;
           updateMessage(assistantId, { content: acc });
         },
+        onFollowups: (questions) => {
+          updateMessage(assistantId, { followUps: questions });
+        },
         onError: (error) => {
           updateMessage(assistantId, {
             content: acc || humanizeError(error),

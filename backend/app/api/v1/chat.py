@@ -85,6 +85,13 @@ async def chat_stream(
             acc += token
             yield {"event": "token", "data": token}
 
+        if acc:
+            try:
+                follow_ups = await service.follow_ups(req.question, acc)
+            except Exception:  # noqa: BLE001 - best-effort, never break the stream
+                follow_ups = []
+            yield {"event": "followups", "data": orjson.dumps(follow_ups).decode()}
+
         # Persist the completed turn.
         await convo.add_message(conversation, "user", req.question)
         await convo.add_message(conversation, "assistant", acc, citations)
