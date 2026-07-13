@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
@@ -10,22 +11,23 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Light "RIVR" palette (navy ink on soft grays), mapped onto the
-        // existing `ide-*` token names so the whole app re-themes at once and
-        // stays visually consistent with the landing page.
+        // "RIVR" palette mapped onto `ide-*` tokens via CSS variables (RGB channel
+        // triplets) so the whole workspace re-themes at once AND Tailwind opacity
+        // modifiers (e.g. bg-ide-accent/10) keep working. Light values live in
+        // :root; dark overrides live under `.dark` (see globals.css).
         ide: {
-          bg: "#eef0f2", // app background (center column)
-          panel: "#ffffff", // sidebars / panels
-          elevated: "#f4f5f7", // cards / inline code
-          hover: "#e7eaee", // hover states
-          border: "#dbdfe6", // subtle navy-tinted outlines
-          accent: "#24406e", // navy — text, icons, active borders
-          accentMuted: "#1e325a", // deep navy — primary button background
-          text: "#1e325a", // navy ink (on-surface)
-          muted: "#5e6470", // secondary text
-          success: "#1a7f4b",
-          danger: "#c0392b",
-          warning: "#b0691b",
+          bg: "rgb(var(--c-bg) / <alpha-value>)",
+          panel: "rgb(var(--c-panel) / <alpha-value>)",
+          elevated: "rgb(var(--c-elevated) / <alpha-value>)",
+          hover: "rgb(var(--c-hover) / <alpha-value>)",
+          border: "rgb(var(--c-border) / <alpha-value>)",
+          accent: "rgb(var(--c-accent) / <alpha-value>)",
+          accentMuted: "rgb(var(--c-accent-muted) / <alpha-value>)",
+          text: "rgb(var(--c-text) / <alpha-value>)",
+          muted: "rgb(var(--c-muted) / <alpha-value>)",
+          success: "rgb(var(--c-success) / <alpha-value>)",
+          danger: "rgb(var(--c-danger) / <alpha-value>)",
+          warning: "rgb(var(--c-warning) / <alpha-value>)",
         },
         // Fluid accent ramp used by the landing page (gradients, glows, glass).
         fluid: {

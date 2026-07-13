@@ -6,7 +6,18 @@ const APP_DESCRIPTION =
   "Chat with your documents and code, search codebases, debug errors, and " +
   "pair-program — every answer grounded in cited sources.";
 
+// Resolve absolute URLs for social images. On Vercel this uses the stable production
+// domain (or the per-deploy URL); locally it falls back to localhost.
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: APP_NAME,
     template: `%s · ${APP_NAME}`,
@@ -50,6 +61,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Apply the saved theme before paint to avoid a flash of the wrong theme. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if(localStorage.getItem('theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}",
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"

@@ -4,6 +4,36 @@
 
 :root {
   color-scheme: light;
+  /* Light theme — RGB channel triplets consumed by the ide-* Tailwind tokens. */
+  --c-bg: 238 240 242;
+  --c-panel: 255 255 255;
+  --c-elevated: 244 245 247;
+  --c-hover: 231 234 238;
+  --c-border: 219 223 230;
+  --c-accent: 36 64 110;
+  --c-accent-muted: 30 50 90;
+  --c-text: 30 50 90;
+  --c-muted: 94 100 112;
+  --c-success: 26 127 75;
+  --c-danger: 192 57 43;
+  --c-warning: 176 105 27;
+}
+
+.dark {
+  color-scheme: dark;
+  /* Dark theme — navy-tinted slate surfaces with a brighter accent for contrast. */
+  --c-bg: 15 18 24;
+  --c-panel: 22 26 34;
+  --c-elevated: 30 35 45;
+  --c-hover: 38 44 56;
+  --c-border: 45 52 66;
+  --c-accent: 130 170 255;
+  --c-accent-muted: 74 105 189;
+  --c-text: 226 232 240;
+  --c-muted: 148 158 175;
+  --c-success: 74 222 128;
+  --c-danger: 248 113 113;
+  --c-warning: 234 179 8;
 }
 
 html,
@@ -943,8 +973,8 @@ body {
 /* Elevated, rounded panel card — the core surface of the workspace. */
 .panel-card {
   border-radius: 16px;
-  background: var(--ide-panel, #ffffff);
-  border: 1px solid #dbdfe6;
+  background: rgb(var(--c-panel));
+  border: 1px solid rgb(var(--c-border));
   box-shadow:
     0 1px 2px rgba(30, 50, 90, 0.05),
     0 10px 30px rgba(30, 50, 90, 0.05);

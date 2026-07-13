@@ -9,10 +9,12 @@ import {
   HelpCircle,
   LogOut,
   type LucideIcon,
+  Moon,
   PanelLeft,
   PanelRight,
   Search,
   Sparkles,
+  Sun,
   Terminal,
   Trash2,
 } from "lucide-react";
@@ -89,6 +91,7 @@ export default function TopBar({
       </div>
 
       <div className="flex items-center gap-1">
+        <ThemeToggle />
         <button
           type="button"
           aria-label="How to use this app"
@@ -115,6 +118,37 @@ export default function TopBar({
         {user ? <AccountMenu username={user.username} onLogout={logout} /> : null}
       </div>
     </header>
+  );
+}
+
+function ThemeToggle() {
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    setDark(document.documentElement.classList.contains("dark"));
+  }, []);
+
+  const toggle = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    try {
+      window.localStorage.setItem("theme", next ? "dark" : "light");
+    } catch {
+      /* ignore */
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+      title={dark ? "Light mode" : "Dark mode"}
+      className="rounded-lg p-2 text-ide-muted transition-colors hover:bg-ide-hover hover:text-ide-text focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent"
+    >
+      {dark ? <Sun size={18} /> : <Moon size={18} />}
+    </button>
   );
 }
 
