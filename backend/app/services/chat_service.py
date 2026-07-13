@@ -14,6 +14,15 @@ from app.rag.contracts import build_citations
 from app.rag.pipeline import RagPipeline
 from app.schemas.chat import Answer
 
+# Shown when a knowledge base has no matching (or no) indexed content, so we never
+# answer ungrounded and pretend it came from the user's documents.
+_NO_CONTEXT_MESSAGE = (
+    "I couldn't find anything about that in this knowledge base. It may not have any "
+    "documents yet — add some with the **+** next to Documentation, or switch to a "
+    "different knowledge base. I only answer from the documents you've indexed so I can "
+    "cite real sources."
+)
+
 
 class ChatService:
     """RAG-grounded documentation Q&A."""
@@ -25,6 +34,8 @@ class ChatService:
     async def answer(self, question: str, collection: str = "docs") -> Answer:
         """Return a grounded answer with citations for ``question``."""
         chunks = await self._rag.retrieve(question, collection)
+        if not chunks:
+            return Answer(text=_NO_CONTEXT_MESSAGE, citations=[])
         messages = prompts.build_doc_qa_messages(question, chunks)
         response = await self._llm.generate(messages)
         return Answer(
@@ -37,6 +48,9 @@ class ChatService:
     async def stream(self, question: str, collection: str = "docs") -> AsyncIterator[str]:
         """Stream answer tokens for ``question`` (citations are sent separately)."""
         chunks = await self._rag.retrieve(question, collection)
+        if not chunks:
+            yield _NO_CONTEXT_MESSAGE
+            return
         messages = prompts.build_doc_qa_messages(question, chunks)
         async for token in self._llm.stream(messages):
             yield token

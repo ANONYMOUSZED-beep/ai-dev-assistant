@@ -41,7 +41,7 @@ const TERMINAL: IndexStatus[] = ["ready", "failed"];
 
 function Workspace() {
   const [mode, setMode] = useState<ChatMode>("docs");
-  const [collection, setCollection] = useState("python");
+  const [collection, setCollection] = useState("getting-started");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   // Mobile/tablet (below md) drawer state — independent of the desktop
@@ -135,7 +135,7 @@ function Workspace() {
   const handleRemoveCustomCollection = useCallback(
     (id: string) => {
       setCustomCollections(removeCustomCollection(id));
-      setCollection((cur) => (cur === id ? "python" : cur));
+      setCollection((cur) => (cur === id ? "getting-started" : cur));
     },
     [],
   );

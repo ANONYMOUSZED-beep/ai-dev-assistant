@@ -39,6 +39,15 @@ class RepositoryService:
     async def answer(self, repository_id: str, question: str) -> Answer:
         """Answer a question grounded in the indexed repository."""
         chunks = await self._rag.retrieve(question, repo_collection(repository_id))
+        if not chunks:
+            return Answer(
+                text=(
+                    "I couldn't find anything relevant in this repository's indexed "
+                    "code. If indexing just finished, try again in a moment — otherwise "
+                    "try rephrasing your question to mention a file, function, or feature."
+                ),
+                citations=[],
+            )
         messages = prompts.build_repo_qa_messages(question, chunks)
         response = await self._llm.generate(messages)
         return Answer(

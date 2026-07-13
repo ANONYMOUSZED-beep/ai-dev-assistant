@@ -99,6 +99,18 @@ class RagPipeline:
             if callable(warmup):
                 await asyncio.to_thread(warmup)
 
+    async def seed_if_empty(
+        self, collection: str, documents: list[Document]
+    ) -> int:
+        """Ingest ``documents`` into ``collection`` only if it has no content yet.
+
+        Idempotent: safe to call on every startup — returns 0 when already seeded.
+        """
+        existing = await asyncio.to_thread(self._store.all_chunks, collection)
+        if existing:
+            return 0
+        return await self.ingest(documents, collection)
+
     def delete_collection(self, collection: str) -> None:
         """Remove an entire collection from the vector store."""
         self._store.delete_collection(collection)

@@ -1,7 +1,7 @@
 "use client";
 
-import { Bot, User } from "lucide-react";
-import { useMemo } from "react";
+import { Bot, Check, Copy, User } from "lucide-react";
+import { useMemo, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -45,6 +45,17 @@ export default function MessageBubble({
   onSelectCitation,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
+  const [copied, setCopied] = useState(false);
+
+  const copyMessage = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
 
   const citationByIndex = useMemo(() => {
     const map = new Map<number, Citation>();
@@ -133,10 +144,23 @@ export default function MessageBubble({
             ) : message.pending ? (
               <span className="cursor-blink" aria-hidden="true" />
             ) : null}
-            {!message.pending && (message.model || message.provider) ? (
-              <div className="mt-2 border-t border-ide-border pt-1.5 text-[0.7rem] text-ide-muted">
-                {message.provider ? `${message.provider} · ` : ""}
-                {message.model ?? ""}
+            {!message.pending && !message.error && message.content.length > 0 ? (
+              <div className="mt-2 flex items-center gap-2 border-t border-ide-border pt-1.5 text-[0.7rem] text-ide-muted">
+                <button
+                  type="button"
+                  onClick={copyMessage}
+                  aria-label={copied ? "Copied" : "Copy answer"}
+                  className="flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-ide-hover hover:text-ide-text focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent"
+                >
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+                {message.model || message.provider ? (
+                  <span className="ml-auto truncate">
+                    {message.provider ? `${message.provider} · ` : ""}
+                    {message.model ?? ""}
+                  </span>
+                ) : null}
               </div>
             ) : null}
           </div>

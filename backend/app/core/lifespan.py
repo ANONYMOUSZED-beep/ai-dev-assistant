@@ -70,6 +70,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             except Exception:
                 logger.exception("Model warmup failed (models will load lazily)")
 
+            # Seed the default "Getting Started" knowledge base so a first-time user
+            # gets a real, cited answer instead of an empty collection. Idempotent.
+            try:
+                from app.rag.seed import (
+                    GETTING_STARTED_COLLECTION,
+                    getting_started_documents,
+                )
+
+                seeded = await app.state.rag_pipeline.seed_if_empty(
+                    GETTING_STARTED_COLLECTION, getting_started_documents()
+                )
+                if seeded:
+                    logger.info("Seeded Getting Started knowledge base (%d chunks)", seeded)
+            except Exception:
+                logger.exception("Getting Started seeding failed (non-fatal)")
+
         warmup_task = asyncio.create_task(_warmup())
 
     try:

@@ -1,7 +1,9 @@
 import type { DocCollection } from "./types";
 
 // Supported documentation collections offered by the backend.
+// "getting-started" is seeded server-side so first-time users get cited answers.
 export const DOC_COLLECTIONS: DocCollection[] = [
+  { id: "getting-started", label: "Getting Started" },
   { id: "python", label: "Python" },
   { id: "fastapi", label: "FastAPI" },
   { id: "react", label: "React" },
