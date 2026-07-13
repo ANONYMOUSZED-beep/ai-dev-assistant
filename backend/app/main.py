@@ -11,11 +11,13 @@ from app.core.exceptions import register_exception_handlers
 from app.core.lifespan import lifespan
 from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware
+from app.core.observability import init_sentry
 
 
 def create_app() -> FastAPI:
     """Build and configure the FastAPI application."""
     settings = get_settings()
+    init_sentry(settings)
     configure_logging(settings.log_level)
 
     app = FastAPI(

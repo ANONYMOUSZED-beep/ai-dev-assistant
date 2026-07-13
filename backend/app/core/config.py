@@ -83,6 +83,9 @@ class Settings(BaseSettings):
     # the button, so username/password auth keeps working unchanged.
     google_client_id: str | None = None
 
+    # Sentry error tracking. When unset, Sentry is not initialised (no-op).
+    sentry_dsn: str | None = None
+
     # ── Database ─────────────────────────────────────────────────
     postgres_user: str = "devassist"
     postgres_password: str = "devassist"
