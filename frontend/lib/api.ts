@@ -402,6 +402,14 @@ export function login(username: string, password: string): Promise<AuthToken> {
   return request<AuthToken>("/auth/login", jsonBody({ username, password }));
 }
 
+// Google OAuth Web client id (set NEXT_PUBLIC_GOOGLE_CLIENT_ID to enable the button).
+export const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+
+/** Exchange a Google Identity Services ID token for our own access token. */
+export function googleLogin(credential: string): Promise<AuthToken> {
+  return request<AuthToken>("/auth/google", jsonBody({ credential }));
+}
+
 export function fetchMe(): Promise<CurrentUser> {
   return request<CurrentUser>("/auth/me", { method: "GET" });
 }

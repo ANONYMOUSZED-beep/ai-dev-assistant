@@ -1,11 +1,13 @@
-"""Password hashing (bcrypt) and JWT access-token helpers."""
+"""Password hashing (bcrypt), JWT access-token helpers, and Google ID-token verify."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import bcrypt
 import jwt
+from jwt import PyJWKClient
 
 from app.core.config import get_settings
 
@@ -54,3 +56,45 @@ def decode_token(token: str) -> str | None:
         return None
     subject = payload.get("sub")
     return subject if isinstance(subject, str) else None
+
+
+# ── Google Sign-In ───────────────────────────────────────────────
+_GOOGLE_CERTS_URL = "https://www.googleapis.com/oauth2/v3/certs"
+_GOOGLE_ISSUERS = {"https://accounts.google.com", "accounts.google.com"}
+_jwk_client: PyJWKClient | None = None
+
+
+def _google_jwk_client() -> PyJWKClient:
+    """Cached JWKS client that fetches (and caches) Google's public signing keys."""
+    global _jwk_client
+    if _jwk_client is None:
+        _jwk_client = PyJWKClient(_GOOGLE_CERTS_URL)
+    return _jwk_client
+
+
+def verify_google_id_token(credential: str) -> dict[str, Any]:
+    """Verify a Google Identity Services ID token and return its claims.
+
+    Validates the RS256 signature against Google's published keys, the audience
+    (our configured client id), the expiry, and the issuer. Raises ``ValueError``
+    if verification fails or Google sign-in isn't configured. This performs a
+    network fetch of Google's certs on first use (then cached), so callers should
+    run it off the event loop (e.g. via ``asyncio.to_thread``).
+    """
+    settings = get_settings()
+    client_id = settings.google_client_id
+    if not client_id:
+        raise ValueError("Google sign-in is not configured")
+
+    signing_key = _google_jwk_client().get_signing_key_from_jwt(credential)
+    claims: dict[str, Any] = jwt.decode(
+        credential,
+        signing_key.key,
+        algorithms=["RS256"],
+        audience=client_id,
+    )
+    if claims.get("iss") not in _GOOGLE_ISSUERS:
+        raise ValueError("Invalid token issuer")
+    if not claims.get("sub") or not claims.get("email"):
+        raise ValueError("Token missing required claims")
+    return claims

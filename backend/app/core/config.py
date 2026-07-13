@@ -78,6 +78,10 @@ class Settings(BaseSettings):
     jwt_secret: str = "dev-insecure-change-me"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
+    # Google OAuth 2.0 Web client id used to verify "Sign in with Google" ID tokens.
+    # When unset, the Google sign-in endpoint returns an error and the frontend hides
+    # the button, so username/password auth keeps working unchanged.
+    google_client_id: str | None = None
 
     # ── Database ─────────────────────────────────────────────────
     postgres_user: str = "devassist"

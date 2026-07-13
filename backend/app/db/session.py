@@ -132,6 +132,10 @@ _PG_MIGRATIONS: tuple[str, ...] = (
     "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS kind VARCHAR(16) DEFAULT 'docs'",
     "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS repository_id VARCHAR(36)",
     "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ",
+    # Google sign-in: users may have no local password, plus email/subject columns.
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(320)",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub VARCHAR(255)",
+    "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL",
 )
 
 

@@ -15,11 +15,13 @@ import {
   type CurrentUser,
   fetchMe,
   getToken,
+  GOOGLE_CLIENT_ID,
   login,
   register,
   setToken,
 } from "@/lib/api";
 import { humanizeError } from "@/lib/errors";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 
 interface AuthContextValue {
   user: CurrentUser | null;
@@ -203,6 +205,20 @@ function AuthScreen({
             {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
           </button>
         </form>
+
+        {GOOGLE_CLIENT_ID ? (
+          <>
+            <div className="my-4 flex items-center gap-3 text-[0.7rem] text-[#8a91a0]">
+              <span className="h-px flex-1 bg-[#e0e4ea]" />
+              or
+              <span className="h-px flex-1 bg-[#e0e4ea]" />
+            </div>
+            <GoogleSignInButton
+              onAuthenticated={onAuthenticated}
+              onError={setError}
+            />
+          </>
+        ) : null}
 
         <button
           type="button"

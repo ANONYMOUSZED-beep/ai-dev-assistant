@@ -29,7 +29,13 @@ class User(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
-    password_hash: Mapped[str] = mapped_column(String(255))
+    # Nullable: accounts created via Google sign-in have no local password.
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Set for Google-linked accounts.
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True, index=True)
+    google_sub: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, unique=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 

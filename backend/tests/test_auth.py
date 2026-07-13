@@ -75,3 +75,48 @@ async def test_protected_endpoint_accepts_valid_token(db_client: AsyncClient) ->
     )
     assert resp.status_code == 200
     assert resp.json()["provider"] == "fake"
+
+
+async def test_google_sign_in_creates_and_reuses_account(
+    db_client: AsyncClient, monkeypatch
+) -> None:
+    """Google sign-in creates a passwordless account, then reuses it on repeat."""
+    import app.api.v1.auth as auth_module
+
+    def fake_verify(credential: str) -> dict:
+        assert credential == "fake-google-credential"
+        return {"sub": "google-123", "email": "Grace@example.com", "name": "Grace"}
+
+    monkeypatch.setattr(auth_module, "verify_google_id_token", fake_verify)
+
+    first = await db_client.post(
+        "/api/v1/auth/google", json={"credential": "fake-google-credential"}
+    )
+    assert first.status_code == 200
+    body = first.json()
+    assert body["access_token"]
+    username = body["username"]
+    assert username  # derived from the email local part
+
+    # Signing in again with the same Google account returns the same username.
+    second = await db_client.post(
+        "/api/v1/auth/google", json={"credential": "fake-google-credential"}
+    )
+    assert second.status_code == 200
+    assert second.json()["username"] == username
+
+
+async def test_google_sign_in_rejects_invalid_token(
+    db_client: AsyncClient, monkeypatch
+) -> None:
+    import app.api.v1.auth as auth_module
+
+    def boom(credential: str) -> dict:
+        raise ValueError("bad token")
+
+    monkeypatch.setattr(auth_module, "verify_google_id_token", boom)
+
+    resp = await db_client.post(
+        "/api/v1/auth/google", json={"credential": "whatever"}
+    )
+    assert resp.status_code == 401
