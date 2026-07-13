@@ -87,7 +87,7 @@ export default function CitationsList({
                 </span>
                 {citation.uri ? (
                   <span className="inline-flex min-w-0 items-center gap-0.5">
-                    <ExternalLink size={10} className="shrink-0" />
+                    <ExternalLink size={10} className="shrink-0" aria-hidden="true" />
                     <span className="truncate" title={citation.uri}>
                       {citation.uri}
                     </span>

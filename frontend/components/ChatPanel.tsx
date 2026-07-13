@@ -49,11 +49,11 @@ interface ChatPanelProps {
 }
 
 const MODE_HINTS: Record<ChatMode, string> = {
-  docs: "Ask a question about the selected documentation collection.",
-  repo: "Ask a question about the selected repository.",
-  search: "Search code semantically across an indexed repository.",
-  debug: "Paste an error or stack trace to get a diagnosis.",
-  pair: "Select an action and paste code to pair-program.",
+  docs: "Ask questions about the documents in your knowledge base.",
+  repo: "Ask questions about your code project in plain language.",
+  search: "Describe what you are looking for and find the matching code.",
+  debug: "Share an error message and get a clear explanation and a fix.",
+  pair: "Paste some code and let the assistant explain, improve, or test it.",
 };
 
 const MODE_ICON: Record<ChatMode, LucideIcon> = {
@@ -65,28 +65,45 @@ const MODE_ICON: Record<ChatMode, LucideIcon> = {
 };
 
 const MODE_TITLE: Record<ChatMode, string> = {
-  docs: "Chat with documentation",
-  repo: "Chat with a repository",
-  search: "Search code semantically",
-  debug: "Debug an error",
-  pair: "Pair-program with AI",
+  docs: "Ask about your documents",
+  repo: "Ask about your code project",
+  search: "Find code by describing it",
+  debug: "Explain and fix an error",
+  pair: "Explain, improve, or test code",
+};
+
+// Plain-language guidance shown in the empty state for modes that use their
+// own dedicated panels (debug/pair) instead of clickable suggestion chips.
+const MODE_GUIDANCE: Partial<Record<ChatMode, string[]>> = {
+  debug: [
+    "Paste the error message or the text that popped up when something broke.",
+    "For example: TypeError: cannot read properties of undefined (reading name).",
+    "Add the bit of code it points to if you have it — that helps a lot.",
+    "You will get a plain-language explanation and a suggested fix right below.",
+  ],
+  pair: [
+    "Pick what you want to do: explain, improve, add tests, and more.",
+    "Paste the code you want help with into the box below.",
+    "Add a note if you have something specific in mind, like: make this run faster.",
+    "You will get back a clear explanation or updated code right below.",
+  ],
 };
 
 const SUGGESTIONS: Record<ChatMode, string[]> = {
   docs: [
-    "How does dependency injection work?",
-    "Explain async request handling",
-    "Show a minimal working example",
+    "What is this project about?",
+    "Walk me through how it works",
+    "Show me a simple example to get started",
   ],
   repo: [
-    "Summarize this repository's architecture",
-    "Where is authentication handled?",
-    "Explain the main entry point",
+    "Give me an overview of this code project",
+    "Where does the login part happen?",
+    "What runs first when the app starts?",
   ],
   search: [
-    "where is JWT auth implemented",
-    "database connection setup",
-    "error handling middleware",
+    "where users sign in",
+    "how the app connects to the database",
+    "the code that handles errors",
   ],
   debug: [],
   pair: [],
@@ -113,7 +130,7 @@ function QuestionComposer({
   };
 
   return (
-    <div className="flex items-end gap-2 p-3">
+    <div className="flex flex-wrap items-end gap-2 p-2 sm:p-3">
       <textarea
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -171,8 +188,8 @@ function SearchComposer({
   };
 
   return (
-    <div className="space-y-2 p-3">
-      <div className="flex items-end gap-2">
+    <div className="space-y-2 p-2 sm:p-3">
+      <div className="flex flex-wrap items-end gap-2">
         <input
           type="text"
           value={query}
@@ -183,9 +200,9 @@ function SearchComposer({
               send();
             }
           }}
-          placeholder="Search code, e.g. 'jwt token validation'"
+          placeholder="Describe the code you want, e.g. where users sign in"
           aria-label="Code search query"
-          className="h-10 flex-1 rounded-md border border-ide-border bg-ide-bg px-3 text-sm text-ide-text placeholder:text-ide-muted focus:border-ide-accent focus:outline-none"
+          className="h-10 min-w-[10rem] flex-1 rounded-md border border-ide-border bg-ide-bg px-3 text-sm text-ide-text placeholder:text-ide-muted focus:border-ide-accent focus:outline-none"
         />
         <div className="w-20">
           <label htmlFor="search-topk" className="sr-only">
@@ -264,6 +281,7 @@ export default function ChatPanel({
 
   const EmptyIcon = MODE_ICON[mode];
   const suggestions = SUGGESTIONS[mode];
+  const guidance = MODE_GUIDANCE[mode];
   const canSuggest =
     mode === "docs" ||
     mode === "search" ||
@@ -339,6 +357,23 @@ export default function ChatPanel({
                 ))}
               </div>
             ) : null}
+            {guidance && guidance.length > 0 ? (
+              <ol className="mx-auto max-w-md space-y-2 pt-1 text-left">
+                {guidance.map((step, i) => (
+                  <li key={step} className="flex items-start gap-2.5 text-sm text-ide-muted">
+                    <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full border border-ide-border bg-ide-panel text-[0.7rem] font-medium text-ide-accent">
+                      {i + 1}
+                    </span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+            {guidance && guidance.length > 0 ? (
+              <p className="mx-auto max-w-sm text-xs text-ide-muted">
+                {"Use the panel below to get started — there's nothing to type up here."}
+              </p>
+            ) : null}
           </div>
         ) : (
           messages.map((message) => (
@@ -367,10 +402,10 @@ export default function ChatPanel({
               onSend={(q) => onSendRepo(q, selectedRepoId)}
             />
           ) : (
-            <div className="p-3 text-xs text-ide-muted">
-              Select a repository with status{" "}
-              <span className="text-ide-success">Ready</span> in the explorer to
-              start a repository chat.
+            <div className="p-2 text-xs text-ide-muted sm:p-3">
+              Pick a code project marked{" "}
+              <span className="text-ide-success">Ready</span> in the explorer,
+              then you can start asking questions about it here.
             </div>
           )
         ) : mode === "search" ? (

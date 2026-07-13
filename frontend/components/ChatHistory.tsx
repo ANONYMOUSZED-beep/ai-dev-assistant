@@ -59,7 +59,7 @@ function KindBadge({ kind }: { kind: ConversationKind }) {
     <span
       className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${meta.badge}`}
     >
-      <Icon size={10} />
+      <Icon size={10} aria-hidden="true" />
       {meta.label}
     </span>
   );
@@ -79,16 +79,16 @@ export default function ChatHistory({
     <section aria-label="Chat history" className="px-3 pt-3">
       <div className="mb-2 flex items-center justify-between px-1">
         <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ide-muted">
-          <History size={13} className="text-ide-accent" />
+          <History size={13} className="text-ide-accent" aria-hidden="true" />
           History
         </div>
         <button
           type="button"
           onClick={onNew}
-          className="flex items-center gap-1 rounded-md border border-ide-border px-1.5 py-0.5 text-[0.7rem] text-ide-text transition-colors hover:border-ide-accent/50 hover:bg-ide-accent/5"
+          className="flex items-center gap-1 rounded-md border border-ide-border px-1.5 py-0.5 text-[0.7rem] text-ide-text transition-colors hover:border-ide-accent/50 hover:bg-ide-accent/5 focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent"
           title="Start a new chat"
         >
-          <Plus size={12} /> New
+          <Plus size={12} aria-hidden="true" /> New
         </button>
       </div>
 
@@ -112,7 +112,8 @@ export default function ChatHistory({
                   <button
                     type="button"
                     onClick={() => onSelect(c)}
-                    className="min-w-0 flex-1 text-left"
+                    aria-current={active ? "true" : undefined}
+                    className="min-w-0 flex-1 rounded text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent"
                     title={c.title ?? "Untitled chat"}
                   >
                     <div className="mb-0.5 flex items-center gap-1.5">
@@ -132,18 +133,18 @@ export default function ChatHistory({
                         }}
                         aria-label="Confirm delete"
                         title="Delete"
-                        className="rounded p-0.5 text-ide-danger hover:bg-ide-hover"
+                        className="rounded p-0.5 text-ide-danger hover:bg-ide-hover focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent"
                       >
-                        <Check size={13} />
+                        <Check size={13} aria-hidden="true" />
                       </button>
                       <button
                         type="button"
                         onClick={() => setConfirmDeleteId(null)}
                         aria-label="Cancel"
                         title="Keep"
-                        className="rounded p-0.5 text-ide-muted hover:bg-ide-hover hover:text-ide-text"
+                        className="rounded p-0.5 text-ide-muted hover:bg-ide-hover hover:text-ide-text focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent"
                       >
-                        <X size={13} />
+                        <X size={13} aria-hidden="true" />
                       </button>
                     </div>
                   ) : (
@@ -152,9 +153,9 @@ export default function ChatHistory({
                       onClick={() => setConfirmDeleteId(c.id)}
                       aria-label="Delete conversation"
                       title="Delete conversation"
-                      className="mt-0.5 rounded p-0.5 text-ide-muted opacity-0 transition-opacity hover:text-ide-danger group-hover:opacity-100"
+                      className="mt-0.5 rounded p-0.5 text-ide-muted opacity-0 transition-opacity hover:text-ide-danger focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent group-hover:opacity-100"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={13} aria-hidden="true" />
                     </button>
                   )}
                 </div>

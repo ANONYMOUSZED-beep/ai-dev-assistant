@@ -21,6 +21,24 @@ export default function DebugPanel({
   const [codeContext, setCodeContext] = useState("");
   const [useRepo, setUseRepo] = useState(true);
 
+  const fillExample = () => {
+    setError(
+      [
+        "Traceback (most recent call last):",
+        '  File "app/orders.py", line 42, in total_price',
+        "    return prices[item] * quantity",
+        "KeyError: 'widget'",
+      ].join("\n"),
+    );
+    setLanguage("python");
+    setCodeContext(
+      [
+        "def total_price(prices, item, quantity):",
+        "    return prices[item] * quantity",
+      ].join("\n"),
+    );
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = error.trim();
@@ -38,12 +56,21 @@ export default function DebugPanel({
   return (
     <form onSubmit={submit} className="space-y-2 p-3">
       <div>
-        <label
-          htmlFor="debug-error"
-          className="mb-1 block text-[0.7rem] font-semibold uppercase tracking-wide text-ide-muted"
-        >
-          Error / stack trace
-        </label>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <label
+            htmlFor="debug-error"
+            className="block text-[0.7rem] font-semibold uppercase tracking-wide text-ide-muted"
+          >
+            Error / stack trace
+          </label>
+          <button
+            type="button"
+            onClick={fillExample}
+            className="rounded text-[0.7rem] font-medium text-ide-muted underline decoration-dotted underline-offset-2 transition-colors hover:text-ide-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent"
+          >
+            {"Try an example"}
+          </button>
+        </div>
         <textarea
           id="debug-error"
           value={error}
@@ -102,9 +129,13 @@ export default function DebugPanel({
       <button
         type="submit"
         disabled={busy || error.trim().length === 0}
-        className="flex items-center gap-1.5 rounded-md bg-ide-accentMuted px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-ide-accent disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex items-center gap-1.5 rounded-md bg-ide-accentMuted px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-ide-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {busy ? <Loader2 size={14} className="animate-spin" /> : <Bug size={14} />}
+        {busy ? (
+          <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+        ) : (
+          <Bug size={14} aria-hidden="true" />
+        )}
         Diagnose
       </button>
     </form>

@@ -77,7 +77,7 @@ export default function CodeViewer({ source }: CodeViewerProps) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-ide-border bg-ide-panel px-3 py-2">
-        <FileCode2 size={14} className="shrink-0 text-ide-accent" />
+        <FileCode2 size={14} className="shrink-0 text-ide-accent" aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-medium text-ide-text" title={source.title}>
             {source.title}

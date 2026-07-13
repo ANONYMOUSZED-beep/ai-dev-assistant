@@ -16,12 +16,42 @@ interface ActivityBarProps {
   onModeChange: (mode: ChatMode) => void;
 }
 
-const ITEMS: { id: ChatMode; label: string; icon: LucideIcon }[] = [
-  { id: "docs", label: "Docs", icon: FileText },
-  { id: "repo", label: "Repo", icon: GitBranch },
-  { id: "search", label: "Search", icon: Search },
-  { id: "debug", label: "Debug", icon: Bug },
-  { id: "pair", label: "Pair", icon: Sparkles },
+const ITEMS: {
+  id: ChatMode;
+  label: string;
+  icon: LucideIcon;
+  description: string;
+}[] = [
+  {
+    id: "docs",
+    label: "Docs",
+    icon: FileText,
+    description: "Ask questions about documents you upload",
+  },
+  {
+    id: "repo",
+    label: "Repo",
+    icon: GitBranch,
+    description: "Ask questions about a code project",
+  },
+  {
+    id: "search",
+    label: "Search",
+    icon: Search,
+    description: "Find code by describing it",
+  },
+  {
+    id: "debug",
+    label: "Debug",
+    icon: Bug,
+    description: "Explain and fix an error",
+  },
+  {
+    id: "pair",
+    label: "Pair",
+    icon: Sparkles,
+    description: "Explain, improve, or test code",
+  },
 ];
 
 export default function ActivityBar({ mode, onModeChange }: ActivityBarProps) {
@@ -41,7 +71,8 @@ export default function ActivityBar({ mode, onModeChange }: ActivityBarProps) {
             type="button"
             aria-selected={active}
             aria-controls="chat-panel-body"
-            title={item.label}
+            title={item.description}
+            aria-label={`${item.label} — ${item.description}`}
             onClick={() => onModeChange(item.id)}
             className={`group flex w-14 flex-col items-center gap-1 rounded-xl px-1 py-2 transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent ${
               active

@@ -54,7 +54,7 @@ export default function TopBar({
           aria-label={sidebarOpen ? "Hide explorer" : "Show explorer"}
           aria-pressed={sidebarOpen}
           onClick={onToggleSidebar}
-          className={`rounded-lg p-2 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent ${
+          className={`rounded-lg p-2.5 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent md:p-2 ${
             sidebarOpen
               ? "bg-ide-accent/10 text-ide-accent"
               : "text-ide-muted hover:bg-ide-hover hover:text-ide-text"
@@ -97,7 +97,7 @@ export default function TopBar({
           aria-label={rightOpen ? "Hide source & citations" : "Show source & citations"}
           aria-pressed={rightOpen}
           onClick={onToggleRight}
-          className={`rounded-lg p-2 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent ${
+          className={`rounded-lg p-2.5 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent md:p-2 ${
             rightOpen
               ? "bg-ide-accent/10 text-ide-accent"
               : "text-ide-muted hover:bg-ide-hover hover:text-ide-text"

@@ -58,9 +58,9 @@ function CollectionButton({
           onClick={onRemove}
           aria-label={`Remove ${collection.label} from the list`}
           title="Remove from list"
-          className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-ide-muted opacity-0 transition-opacity hover:text-ide-danger group-hover:opacity-100"
+          className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-ide-muted opacity-0 transition-opacity hover:text-ide-danger focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent group-hover:opacity-100"
         >
-          <X size={11} />
+          <X size={11} aria-hidden="true" />
         </button>
       ) : null}
     </div>
@@ -78,7 +78,7 @@ export default function CollectionSelector({
     <div className="px-3 py-2">
       <div className="mb-1.5 flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wide text-ide-muted">
-          <BookOpen size={12} />
+          <BookOpen size={12} aria-hidden="true" />
           Documentation
         </span>
         <IngestDocs collection={value} onIngested={onIngested} />
@@ -98,7 +98,10 @@ export default function CollectionSelector({
       {customCollections.length > 0 ? (
         <>
           <div className="mb-1.5 mt-3 flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-wide text-ide-muted">
-            <span className="h-1.5 w-1.5 rounded-full bg-ide-success" />
+            <span
+              className="h-1.5 w-1.5 rounded-full bg-ide-success"
+              aria-hidden="true"
+            />
             Your uploads
           </div>
           <div className="grid grid-cols-2 gap-1.5">

@@ -59,7 +59,7 @@ export default function Sidebar({
 }: SidebarProps) {
   return (
     <aside
-      className="flex h-full w-[288px] flex-col overflow-hidden"
+      className="flex h-full w-full flex-col overflow-hidden"
       aria-label="Explorer"
     >
       <div className="flex items-center gap-2 border-b border-ide-border px-4 py-3.5">

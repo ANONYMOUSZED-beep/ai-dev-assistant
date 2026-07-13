@@ -25,6 +25,22 @@ export default function PairPanel({ busy, onSubmit }: PairPanelProps) {
   const [language, setLanguage] = useState("");
   const [instructions, setInstructions] = useState("");
 
+  const fillExample = () => {
+    setAction("explain");
+    setCode(
+      [
+        "def moving_average(values, window):",
+        "    result = []",
+        "    for i in range(len(values) - window + 1):",
+        "        chunk = values[i : i + window]",
+        "        result.append(sum(chunk) / window)",
+        "    return result",
+      ].join("\n"),
+    );
+    setLanguage("python");
+    setInstructions("");
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = code.trim();
@@ -61,12 +77,21 @@ export default function PairPanel({ busy, onSubmit }: PairPanelProps) {
         })}
       </div>
       <div>
-        <label
-          htmlFor="pair-code"
-          className="mb-1 block text-[0.7rem] font-semibold uppercase tracking-wide text-ide-muted"
-        >
-          Code
-        </label>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <label
+            htmlFor="pair-code"
+            className="block text-[0.7rem] font-semibold uppercase tracking-wide text-ide-muted"
+          >
+            Code
+          </label>
+          <button
+            type="button"
+            onClick={fillExample}
+            className="rounded text-[0.7rem] font-medium text-ide-muted underline decoration-dotted underline-offset-2 transition-colors hover:text-ide-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent"
+          >
+            {"Try an example"}
+          </button>
+        </div>
         <textarea
           id="pair-code"
           value={code}
@@ -114,12 +139,12 @@ export default function PairPanel({ busy, onSubmit }: PairPanelProps) {
       <button
         type="submit"
         disabled={busy || code.trim().length === 0}
-        className="flex items-center gap-1.5 rounded-md bg-ide-accentMuted px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-ide-accent disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex items-center gap-1.5 rounded-md bg-ide-accentMuted px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-ide-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? (
-          <Loader2 size={14} className="animate-spin" />
+          <Loader2 size={14} className="animate-spin" aria-hidden="true" />
         ) : (
-          <Sparkles size={14} />
+          <Sparkles size={14} aria-hidden="true" />
         )}
         Run
       </button>

@@ -44,6 +44,41 @@ function Workspace() {
   const [collection, setCollection] = useState("python");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
+  // Mobile/tablet (below md) drawer state — independent of the desktop
+  // collapse booleans so the drawers start closed and the chat is full-width.
+  const [mobileLeftOpen, setMobileLeftOpen] = useState(false);
+  const [mobileRightOpen, setMobileRightOpen] = useState(false);
+
+  const isDesktop = useCallback(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(min-width: 768px)").matches,
+    [],
+  );
+
+  // TopBar toggles: collapse in-flow panels on desktop, open drawers on mobile.
+  const handleToggleSidebar = useCallback(() => {
+    if (isDesktop()) {
+      setSidebarOpen((v) => !v);
+    } else {
+      setMobileLeftOpen((v) => !v);
+      setMobileRightOpen(false);
+    }
+  }, [isDesktop]);
+
+  const handleToggleRight = useCallback(() => {
+    if (isDesktop()) {
+      setRightOpen((v) => !v);
+    } else {
+      setMobileRightOpen((v) => !v);
+      setMobileLeftOpen(false);
+    }
+  }, [isDesktop]);
+
+  const closeMobileDrawers = useCallback(() => {
+    setMobileLeftOpen(false);
+    setMobileRightOpen(false);
+  }, []);
 
   const [repositories, setRepositories] = useState<RepositoryResponse[]>([]);
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
@@ -245,11 +280,18 @@ function Workspace() {
     [refreshRepositories],
   );
 
-  const handleSelectCitation = useCallback((citation: Citation) => {
-    setViewerSource(citationToSource(citation));
-    setActiveCitationIndex(citation.index);
-    setRightOpen(true);
-  }, []);
+  const handleSelectCitation = useCallback(
+    (citation: Citation) => {
+      setViewerSource(citationToSource(citation));
+      setActiveCitationIndex(citation.index);
+      setRightOpen(true);
+      if (!isDesktop()) {
+        setMobileRightOpen(true);
+        setMobileLeftOpen(false);
+      }
+    },
+    [isDesktop],
+  );
 
   const handleDeleteRepo = useCallback(async (id: string) => {
     try {
@@ -262,15 +304,78 @@ function Workspace() {
     setSelectedRepoId((cur) => (cur === id ? null : cur));
   }, []);
 
-  const handleOpenFile = useCallback((source: ViewerSource) => {
-    setViewerSource(source);
-    setRightOpen(true);
-  }, []);
+  const handleOpenFile = useCallback(
+    (source: ViewerSource) => {
+      setViewerSource(source);
+      setRightOpen(true);
+      if (!isDesktop()) {
+        setMobileRightOpen(true);
+        setMobileLeftOpen(false);
+      }
+    },
+    [isDesktop],
+  );
 
   const files = useMemo(
     () => (selectedRepoId ? repoFiles[selectedRepoId] ?? [] : []),
     [repoFiles, selectedRepoId],
   );
+
+  // Shared Explorer content — rendered in the in-flow desktop panel and in the
+  // mobile slide-over drawer.
+  const sidebarNode = (
+    <Sidebar
+      collection={collection}
+      onCollectionChange={setCollection}
+      customCollections={customCollections}
+      onIngested={handleIngested}
+      onRemoveCustomCollection={handleRemoveCustomCollection}
+      repositories={repositories}
+      selectedRepoId={selectedRepoId}
+      connecting={connecting}
+      connectError={connectError}
+      files={files}
+      onConnect={handleConnect}
+      onSelectRepo={setSelectedRepoId}
+      onDeleteRepo={handleDeleteRepo}
+      onOpenFile={handleOpenFile}
+      conversations={conversations}
+      activeConversationId={chat.conversationId}
+      conversationsLoading={conversationsLoading}
+      onSelectConversation={handleSelectConversation}
+      onNewChat={chat.newChat}
+      onDeleteConversation={handleDeleteConversation}
+    />
+  );
+
+  // Shared source-viewer + citations content.
+  const rightPanelInner = (
+    <>
+      <div className="min-h-0 flex-[3] border-b border-ide-border">
+        <CodeViewer source={viewerSource} />
+      </div>
+      <div className="flex min-h-0 flex-[2] flex-col">
+        <div className="flex items-center gap-2 border-b border-ide-border px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-ide-muted">
+          <ListTree size={14} className="text-ide-accent" />
+          Citations
+          {activeCitations.length > 0 ? (
+            <span className="ml-auto rounded-full bg-ide-accent/10 px-2 py-0.5 font-mono text-[0.7rem] normal-case text-ide-accent">
+              {activeCitations.length}
+            </span>
+          ) : null}
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <CitationsList
+            citations={activeCitations}
+            activeIndex={activeCitationIndex}
+            onSelect={handleSelectCitation}
+          />
+        </div>
+      </div>
+    </>
+  );
+
+  const anyDrawerOpen = mobileLeftOpen || mobileRightOpen;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-ide-bg">
@@ -287,8 +392,8 @@ function Workspace() {
         mode={mode}
         sidebarOpen={sidebarOpen}
         rightOpen={rightOpen}
-        onToggleSidebar={() => setSidebarOpen((v) => !v)}
-        onToggleRight={() => setRightOpen((v) => !v)}
+        onToggleSidebar={handleToggleSidebar}
+        onToggleRight={handleToggleRight}
         onOpenGuide={() => setGuideOpen(true)}
       />
 
@@ -298,35 +403,14 @@ function Workspace() {
           <ActivityBar mode={mode} onModeChange={handleModeChange} />
         </div>
 
-        {/* Explorer (collapsible) */}
+        {/* Explorer (collapsible on desktop; a drawer below md) */}
         <div
-          className={`panel-collapse shrink-0 overflow-hidden ${
-            sidebarOpen ? "w-[288px] opacity-100" : "w-0 opacity-0"
+          className={`panel-collapse hidden shrink-0 overflow-hidden md:block ${
+            sidebarOpen ? "md:w-[288px] md:opacity-100" : "md:w-0 md:opacity-0"
           }`}
         >
           <div className="panel-card h-full w-[288px] overflow-hidden">
-            <Sidebar
-              collection={collection}
-              onCollectionChange={setCollection}
-              customCollections={customCollections}
-              onIngested={handleIngested}
-              onRemoveCustomCollection={handleRemoveCustomCollection}
-              repositories={repositories}
-              selectedRepoId={selectedRepoId}
-              connecting={connecting}
-              connectError={connectError}
-              files={files}
-              onConnect={handleConnect}
-              onSelectRepo={setSelectedRepoId}
-              onDeleteRepo={handleDeleteRepo}
-              onOpenFile={handleOpenFile}
-              conversations={conversations}
-              activeConversationId={chat.conversationId}
-              conversationsLoading={conversationsLoading}
-              onSelectConversation={handleSelectConversation}
-              onNewChat={chat.newChat}
-              onDeleteConversation={handleDeleteConversation}
-            />
+            {sidebarNode}
           </div>
         </div>
 
@@ -350,39 +434,62 @@ function Workspace() {
           />
         </div>
 
-        {/* Source viewer + citations (collapsible) */}
+        {/* Source viewer + citations (collapsible on desktop; a drawer below md) */}
         <div
-          className={`panel-collapse shrink-0 overflow-hidden ${
-            rightOpen ? "w-[420px] opacity-100" : "w-0 opacity-0"
+          className={`panel-collapse hidden shrink-0 overflow-hidden md:block ${
+            rightOpen ? "md:w-[420px] md:opacity-100" : "md:w-0 md:opacity-0"
           }`}
         >
           <aside
             className="panel-card flex h-full w-[420px] flex-col overflow-hidden"
             aria-label="Source viewer and citations"
           >
-            <div className="min-h-0 flex-[3] border-b border-ide-border">
-              <CodeViewer source={viewerSource} />
-            </div>
-            <div className="flex min-h-0 flex-[2] flex-col">
-              <div className="flex items-center gap-2 border-b border-ide-border px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-ide-muted">
-                <ListTree size={14} className="text-ide-accent" />
-                Citations
-                {activeCitations.length > 0 ? (
-                  <span className="ml-auto rounded-full bg-ide-accent/10 px-2 py-0.5 font-mono text-[0.7rem] normal-case text-ide-accent">
-                    {activeCitations.length}
-                  </span>
-                ) : null}
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                <CitationsList
-                  citations={activeCitations}
-                  activeIndex={activeCitationIndex}
-                  onSelect={handleSelectCitation}
-                />
-              </div>
-            </div>
+            {rightPanelInner}
           </aside>
         </div>
+      </div>
+
+      {/* ── Mobile / tablet drawers (below md only) ───────────────────── */}
+      {/* Backdrop: tap to dismiss the open drawer. */}
+      <div
+        onClick={closeMobileDrawers}
+        aria-hidden={!anyDrawerOpen}
+        className={`fixed inset-0 top-14 z-40 bg-black/50 transition-opacity duration-300 md:hidden ${
+          anyDrawerOpen
+            ? "opacity-100"
+            : "pointer-events-none opacity-0"
+        }`}
+      />
+
+      {/* Left Explorer drawer — slides in from the left, past the mode rail. */}
+      <div
+        role="dialog"
+        aria-label="Explorer"
+        aria-hidden={!mobileLeftOpen}
+        className={`fixed bottom-2 left-16 top-16 z-50 w-[288px] max-w-[80vw] transition-transform duration-300 ease-out md:hidden ${
+          mobileLeftOpen ? "translate-x-0" : "-translate-x-[130%]"
+        }`}
+      >
+        <div className="panel-card h-full w-full overflow-hidden">
+          {sidebarNode}
+        </div>
+      </div>
+
+      {/* Right source/citations drawer — slides in from the right. */}
+      <div
+        role="dialog"
+        aria-label="Source viewer and citations"
+        aria-hidden={!mobileRightOpen}
+        className={`fixed bottom-2 right-2 top-16 z-50 w-[420px] max-w-[92vw] transition-transform duration-300 ease-out md:hidden ${
+          mobileRightOpen ? "translate-x-0" : "translate-x-[130%]"
+        }`}
+      >
+        <aside
+          className="panel-card flex h-full w-full flex-col overflow-hidden"
+          aria-label="Source viewer and citations"
+        >
+          {rightPanelInner}
+        </aside>
       </div>
     </div>
   );
