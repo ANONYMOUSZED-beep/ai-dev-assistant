@@ -161,6 +161,22 @@ export function repositoryChatStream(
   );
 }
 
+/** Stream a debugging answer from POST /debug/stream. */
+export function debugStream(
+  req: DebugRequest,
+  handlers: StreamHandlers,
+): Promise<void> {
+  return streamSSE("/debug/stream", req, handlers);
+}
+
+/** Stream a pair-programming answer from POST /pair/stream. */
+export function pairStream(
+  req: PairRequest,
+  handlers: StreamHandlers,
+): Promise<void> {
+  return streamSSE("/pair/stream", req, handlers);
+}
+
 async function streamSSE(
   path: string,
   body: unknown,

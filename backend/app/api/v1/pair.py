@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import orjson
 from fastapi import APIRouter
+from sse_starlette.sse import EventSourceResponse
 
 from app.core.deps import CurrentUserDep, LLMDep, RagDep, SessionDep
 from app.schemas.chat import Answer, PairRequest
@@ -37,3 +39,55 @@ async def pair(
         citations=answer.citations,
     )
     return answer
+
+
+@router.post("/stream")
+async def pair_stream(
+    req: PairRequest,
+    rag: RagDep,
+    llm: LLMDep,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> EventSourceResponse:
+    """Stream a pair-programming answer token-by-token, then persist the turn."""
+    service = PairService(rag, llm)
+    convo = ConversationService(session)
+
+    title = f"Pair · {req.action}"
+    if req.instructions:
+        title += f": {req.instructions[:80]}"
+    conversation = await convo.resolve(
+        user_id=current_user.id,
+        conversation_id=None,
+        kind="pair",
+        first_message=title,
+    )
+    await session.commit()
+
+    async def event_generator():
+        yield {
+            "event": "meta",
+            "data": orjson.dumps({"conversation_id": conversation.id}).decode(),
+        }
+        citations = (
+            await service.retrieve_citations(
+                req.action, req.code, req.language, req.instructions
+            )
+        ).citations
+        yield {
+            "event": "citations",
+            "data": orjson.dumps([c.model_dump() for c in citations]).decode(),
+        }
+        acc = ""
+        async for token in service.stream(
+            req.action, req.code, req.language, req.instructions
+        ):
+            acc += token
+            yield {"event": "token", "data": token}
+
+        await convo.add_message(conversation, "user", title)
+        await convo.add_message(conversation, "assistant", acc, citations)
+        await session.commit()
+        yield {"event": "done", "data": ""}
+
+    return EventSourceResponse(event_generator())

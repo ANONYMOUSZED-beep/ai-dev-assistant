@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import orjson
 from fastapi import APIRouter
+from sse_starlette.sse import EventSourceResponse
 
 from app.core.deps import CurrentUserDep, LLMDep, RagDep, SessionDep
 from app.schemas.chat import Answer, DebugRequest
@@ -38,3 +40,55 @@ async def debug(
         repository_id=req.repository_id,
     )
     return answer
+
+
+@router.post("/stream")
+async def debug_stream(
+    req: DebugRequest,
+    rag: RagDep,
+    llm: LLMDep,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> EventSourceResponse:
+    """Stream a debug answer token-by-token, then persist the turn."""
+    service = DebugService(rag, llm)
+    convo = ConversationService(session)
+
+    first_line = req.error.strip().splitlines()[0] if req.error.strip() else "Debug"
+    summary = f"Debug: {first_line[:120]}"
+    conversation = await convo.resolve(
+        user_id=current_user.id,
+        conversation_id=None,
+        kind="debug",
+        first_message=summary,
+        repository_id=req.repository_id,
+    )
+    await session.commit()
+
+    async def event_generator():
+        yield {
+            "event": "meta",
+            "data": orjson.dumps({"conversation_id": conversation.id}).decode(),
+        }
+        citations = (
+            await service.retrieve_citations(
+                req.error, req.language, req.code_context, req.repository_id
+            )
+        ).citations
+        yield {
+            "event": "citations",
+            "data": orjson.dumps([c.model_dump() for c in citations]).decode(),
+        }
+        acc = ""
+        async for token in service.stream(
+            req.error, req.language, req.code_context, req.repository_id
+        ):
+            acc += token
+            yield {"event": "token", "data": token}
+
+        await convo.add_message(conversation, "user", summary)
+        await convo.add_message(conversation, "assistant", acc, citations)
+        await session.commit()
+        yield {"event": "done", "data": ""}
+
+    return EventSourceResponse(event_generator())

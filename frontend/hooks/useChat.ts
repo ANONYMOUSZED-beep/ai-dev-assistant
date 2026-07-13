@@ -4,15 +4,14 @@ import { useCallback, useRef, useState } from "react";
 
 import {
   chatStream,
-  debugError,
-  pairProgram,
+  debugStream,
+  pairStream,
   repositoryChatStream,
   searchCode,
   type StreamHandlers,
 } from "@/lib/api";
 import { humanizeError } from "@/lib/errors";
 import type {
-  Answer,
   ChatMessage,
   Citation,
   CodeSearchHit,
@@ -202,34 +201,15 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
     [runStream],
   );
 
-  // ── Non-streaming generation (debug + pair) ──────────────────────
-  const generateAnswer = useCallback(
-    async (run: () => Promise<Answer>) => {
-      const assistantId = addAssistantPlaceholder();
-      setIsBusy(true);
-      try {
-        const answer = await run();
-        updateMessage(assistantId, {
-          content: answer.text,
-          citations: answer.citations,
-          model: answer.model,
-          provider: answer.provider,
-          pending: false,
-        });
-        onCitations?.(answer.citations);
-        if (answer.conversation_id) applyConversationId(answer.conversation_id);
-        onTurnPersisted?.(answer.conversation_id ?? conversationIdRef.current);
-      } catch (err) {
-        updateMessage(assistantId, {
-          content: humanizeError(err),
-          error: true,
-          pending: false,
-        });
-      } finally {
-        setIsBusy(false);
-      }
-    },
-    [addAssistantPlaceholder, applyConversationId, onCitations, onTurnPersisted, updateMessage],
+  // ── Streaming generation (debug + pair) ──────────────────────────
+  const generateDebug = useCallback(
+    (req: DebugRequest) => runStream((handlers) => debugStream(req, handlers)),
+    [runStream],
+  );
+
+  const generatePair = useCallback(
+    (req: PairRequest) => runStream((handlers) => pairStream(req, handlers)),
+    [runStream],
   );
 
   const generateSearch = useCallback(
@@ -285,10 +265,10 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
     (req: DebugRequest) => {
       const summary = `Debug: ${req.error.split("\n")[0].slice(0, 120)}`;
       pushUser(summary);
-      lastGenRef.current = () => generateAnswer(() => debugError(req));
-      return generateAnswer(() => debugError(req));
+      lastGenRef.current = () => generateDebug(req);
+      return generateDebug(req);
     },
-    [generateAnswer, pushUser],
+    [generateDebug, pushUser],
   );
 
   const sendPair = useCallback(
@@ -297,10 +277,10 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
         req.instructions ? `: ${req.instructions}` : ""
       }`;
       pushUser(summary);
-      lastGenRef.current = () => generateAnswer(() => pairProgram(req));
-      return generateAnswer(() => pairProgram(req));
+      lastGenRef.current = () => generatePair(req);
+      return generatePair(req);
     },
-    [generateAnswer, pushUser],
+    [generatePair, pushUser],
   );
 
   const sendSearch = useCallback(

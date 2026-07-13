@@ -307,7 +307,7 @@ export default function ChatPanel({
       <div className="flex items-center justify-between border-b border-ide-border bg-ide-panel/40 px-4 py-2 text-[0.7rem] text-ide-muted">
         <span className="truncate">{MODE_HINTS[mode]}</span>
         <div className="flex items-center gap-2">
-          {isBusy && (mode === "docs" || mode === "repo") ? (
+          {isBusy && mode !== "search" ? (
             <button
               type="button"
               onClick={onStop}
