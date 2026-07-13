@@ -7,6 +7,7 @@ import {
   GitBranch,
   Loader2,
   type LucideIcon,
+  RefreshCw,
   Search,
   Sparkles,
   Square,
@@ -37,6 +38,8 @@ interface ChatPanelProps {
   onSelectCitation: (citation: Citation) => void;
   onStop: () => void;
   onClear: () => void;
+  onRegenerate: () => void;
+  canRegenerate: boolean;
   onSendDocs: (question: string, collection: string) => void;
   onSendRepo: (question: string, repositoryId: string) => void;
   onSendSearch: (
@@ -259,6 +262,8 @@ export default function ChatPanel({
   onSelectCitation,
   onStop,
   onClear,
+  onRegenerate,
+  canRegenerate,
   onSendDocs,
   onSendRepo,
   onSendSearch,
@@ -302,22 +307,32 @@ export default function ChatPanel({
       <div className="flex items-center justify-between border-b border-ide-border bg-ide-panel/40 px-4 py-2 text-[0.7rem] text-ide-muted">
         <span className="truncate">{MODE_HINTS[mode]}</span>
         <div className="flex items-center gap-2">
-          {isBusy && mode === "docs" ? (
+          {isBusy && (mode === "docs" || mode === "repo") ? (
             <button
               type="button"
               onClick={onStop}
-              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-ide-danger hover:bg-ide-hover"
+              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-ide-danger hover:bg-ide-hover focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent"
             >
-              <Square size={11} /> Stop
+              <Square size={11} aria-hidden="true" /> Stop
+            </button>
+          ) : null}
+          {!isBusy && canRegenerate && messages.length > 0 ? (
+            <button
+              type="button"
+              onClick={onRegenerate}
+              title="Regenerate the last answer"
+              className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-ide-hover hover:text-ide-text focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent"
+            >
+              <RefreshCw size={11} aria-hidden="true" /> Regenerate
             </button>
           ) : null}
           <button
             type="button"
             onClick={onClear}
             disabled={messages.length === 0}
-            className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-ide-hover hover:text-ide-text disabled:opacity-40"
+            className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-ide-hover hover:text-ide-text focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent disabled:opacity-40"
           >
-            <Trash2 size={11} /> Clear
+            <Trash2 size={11} aria-hidden="true" /> Clear
           </button>
         </div>
       </div>

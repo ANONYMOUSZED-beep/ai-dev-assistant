@@ -6,8 +6,10 @@ so each account only sees its own — and they survive restarts.
 
 from __future__ import annotations
 
+import orjson
 from fastapi import APIRouter, BackgroundTasks
 from sqlalchemy import select
+from sse_starlette.sse import EventSourceResponse
 
 from app.core.deps import CurrentUserDep, LLMDep, RagDep, SessionDep
 from app.core.exceptions import NotFoundError
@@ -152,3 +154,55 @@ async def repository_chat(
         repository_id=repository_id,
     )
     return answer
+
+
+@router.post("/{repository_id}/chat/stream")
+async def repository_chat_stream(
+    repository_id: str,
+    req: RepoChatRequest,
+    session: SessionDep,
+    rag: RagDep,
+    llm: LLMDep,
+    current_user: CurrentUserDep,
+) -> EventSourceResponse:
+    """Stream a repository answer token-by-token, then persist the turn."""
+    repo = await session.get(Repository, repository_id)
+    if repo is None or repo.user_id != current_user.id:
+        raise NotFoundError(f"Repository {repository_id} not found")
+
+    service = RepositoryService(rag, llm)
+    convo = ConversationService(session)
+    conversation = await convo.resolve(
+        user_id=current_user.id,
+        conversation_id=req.conversation_id,
+        kind="repo",
+        first_message=req.question,
+        collection=repo.collection,
+        repository_id=repository_id,
+    )
+    await session.commit()
+
+    async def event_generator():
+        yield {
+            "event": "meta",
+            "data": orjson.dumps({"conversation_id": conversation.id}).decode(),
+        }
+        citations = (
+            await service.retrieve_citations(repository_id, req.question)
+        ).citations
+        yield {
+            "event": "citations",
+            "data": orjson.dumps([c.model_dump() for c in citations]).decode(),
+        }
+        acc = ""
+        async for token in service.stream(repository_id, req.question):
+            acc += token
+            yield {"event": "token", "data": token}
+
+        await convo.add_message(conversation, "user", req.question)
+        await convo.add_message(conversation, "assistant", acc, citations)
+        await session.commit()
+
+        yield {"event": "done", "data": ""}
+
+    return EventSourceResponse(event_generator())

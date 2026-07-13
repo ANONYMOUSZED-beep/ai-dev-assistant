@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.llm import prompts
@@ -12,6 +14,12 @@ from app.rag.pipeline import RagPipeline
 from app.schemas.chat import Answer
 
 logger = get_logger(__name__)
+
+_NO_CONTEXT_MESSAGE = (
+    "I couldn't find anything relevant in this repository's indexed code. If indexing "
+    "just finished, try again in a moment — otherwise try rephrasing to mention a "
+    "file, function, or feature."
+)
 
 
 def repo_collection(repository_id: str) -> str:
@@ -40,14 +48,7 @@ class RepositoryService:
         """Answer a question grounded in the indexed repository."""
         chunks = await self._rag.retrieve(question, repo_collection(repository_id))
         if not chunks:
-            return Answer(
-                text=(
-                    "I couldn't find anything relevant in this repository's indexed "
-                    "code. If indexing just finished, try again in a moment — otherwise "
-                    "try rephrasing your question to mention a file, function, or feature."
-                ),
-                citations=[],
-            )
+            return Answer(text=_NO_CONTEXT_MESSAGE, citations=[])
         messages = prompts.build_repo_qa_messages(question, chunks)
         response = await self._llm.generate(messages)
         return Answer(
@@ -56,3 +57,20 @@ class RepositoryService:
             model=response.model,
             provider=response.provider,
         )
+
+    async def retrieve_citations(self, repository_id: str, question: str) -> Answer:
+        """Return citations only (used to enrich a streamed answer)."""
+        chunks = await self._rag.retrieve(question, repo_collection(repository_id))
+        return Answer(text="", citations=build_citations(chunks))
+
+    async def stream(
+        self, repository_id: str, question: str
+    ) -> AsyncIterator[str]:
+        """Stream answer tokens grounded in the indexed repository."""
+        chunks = await self._rag.retrieve(question, repo_collection(repository_id))
+        if not chunks:
+            yield _NO_CONTEXT_MESSAGE
+            return
+        messages = prompts.build_repo_qa_messages(question, chunks)
+        async for token in self._llm.stream(messages):
+            yield token

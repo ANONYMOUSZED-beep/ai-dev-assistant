@@ -141,19 +141,40 @@ export interface StreamHandlers {
  * Parses the SSE response body manually via fetch + ReadableStream so it works
  * with POST requests (the native EventSource only supports GET).
  */
-export async function chatStream(
+export function chatStream(
   req: ChatRequest,
+  handlers: StreamHandlers,
+): Promise<void> {
+  return streamSSE("/chat/stream", req, handlers);
+}
+
+/** Stream a repository answer from POST /repositories/{id}/chat/stream. */
+export function repositoryChatStream(
+  id: string,
+  req: RepoChatRequest,
+  handlers: StreamHandlers,
+): Promise<void> {
+  return streamSSE(
+    `/repositories/${encodeURIComponent(id)}/chat/stream`,
+    req,
+    handlers,
+  );
+}
+
+async function streamSSE(
+  path: string,
+  body: unknown,
   handlers: StreamHandlers,
 ): Promise<void> {
   let res: Response;
   try {
-    res = await fetch(`${API_BASE_URL}/chat/stream`, {
+    res = await fetch(`${API_BASE_URL}${path}`, {
       method: "POST",
       headers: withHeaders({
         "Content-Type": "application/json",
         Accept: "text/event-stream",
       }),
-      body: JSON.stringify(req),
+      body: JSON.stringify(body),
       signal: handlers.signal,
     });
   } catch (err) {

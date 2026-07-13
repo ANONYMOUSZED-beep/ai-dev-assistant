@@ -6,8 +6,9 @@ import {
   chatStream,
   debugError,
   pairProgram,
-  repositoryChat,
+  repositoryChatStream,
   searchCode,
+  type StreamHandlers,
 } from "@/lib/api";
 import { humanizeError } from "@/lib/errors";
 import type {
@@ -57,9 +58,7 @@ function hitsToMarkdown(query: string, hits: CodeSearchHit[]): string {
 }
 
 export interface UseChatOptions {
-  // Called whenever an assistant message produces citations.
   onCitations?: (citations: Citation[]) => void;
-  // Called after a turn is persisted (so callers can refresh the history list).
   onTurnPersisted?: (conversationId: string | null) => void;
 }
 
@@ -68,8 +67,9 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
   const [isBusy, setIsBusy] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  // Mirror of conversationId for use inside stable callbacks without stale closures.
   const conversationIdRef = useRef<string | null>(null);
+  // Replays just the assistant generation of the last turn (for "regenerate").
+  const lastGenRef = useRef<(() => Promise<void>) | null>(null);
 
   const applyConversationId = useCallback((id: string | null) => {
     conversationIdRef.current = id;
@@ -92,22 +92,32 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
     ]);
   }, []);
 
+  const addAssistantPlaceholder = useCallback((): string => {
+    const id = uid();
+    setMessages((prev) => [
+      ...prev,
+      { id, role: "assistant", content: "", citations: [], pending: true },
+    ]);
+    return id;
+  }, []);
+
   const clear = useCallback(() => {
     setMessages([]);
+    lastGenRef.current = null;
     onCitations?.([]);
   }, [onCitations]);
 
-  // Start a brand-new conversation (keeps current mode).
   const newChat = useCallback(() => {
     applyConversationId(null);
     setMessages([]);
+    lastGenRef.current = null;
     onCitations?.([]);
   }, [applyConversationId, onCitations]);
 
-  // Load a previously saved conversation into the panel.
   const loadConversation = useCallback(
     (detail: ConversationDetail) => {
       applyConversationId(detail.id);
+      lastGenRef.current = null;
       const loaded: ChatMessage[] = detail.messages.map((m) => ({
         id: m.id,
         role: m.role,
@@ -129,76 +139,73 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
     setIsBusy(false);
   }, []);
 
-  // Docs chat with token streaming.
-  const sendDocs = useCallback(
-    async (question: string, collection: string) => {
-      pushUser(question);
-      const assistantId = uid();
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: assistantId,
-          role: "assistant",
-          content: "",
-          citations: [],
-          pending: true,
-        },
-      ]);
+  // ── Streaming generation (docs + repo) ───────────────────────────
+  const runStream = useCallback(
+    async (invoke: (handlers: StreamHandlers) => Promise<void>) => {
+      const assistantId = addAssistantPlaceholder();
       setIsBusy(true);
       const controller = new AbortController();
       abortRef.current = controller;
-
       let acc = "";
-      await chatStream(
-        {
-          question,
-          collection,
-          stream: true,
-          conversation_id: conversationIdRef.current,
+      await invoke({
+        signal: controller.signal,
+        onMeta: (meta) => applyConversationId(meta.conversation_id),
+        onCitations: (citations) => {
+          updateMessage(assistantId, { citations });
+          onCitations?.(citations);
         },
-        {
-          signal: controller.signal,
-          onMeta: (meta) => applyConversationId(meta.conversation_id),
-          onCitations: (citations) => {
-            updateMessage(assistantId, { citations });
-            onCitations?.(citations);
-          },
-          onToken: (token) => {
-            acc += token;
-            updateMessage(assistantId, { content: acc });
-          },
-          onError: (error) => {
-            updateMessage(assistantId, {
-              content: acc || humanizeError(error),
-              error: true,
-              pending: false,
-            });
-          },
+        onToken: (token) => {
+          acc += token;
+          updateMessage(assistantId, { content: acc });
         },
-      );
+        onError: (error) => {
+          updateMessage(assistantId, {
+            content: acc || humanizeError(error),
+            error: true,
+            pending: false,
+          });
+        },
+      });
       updateMessage(assistantId, { pending: false });
       setIsBusy(false);
       abortRef.current = null;
       onTurnPersisted?.(conversationIdRef.current);
     },
-    [applyConversationId, onCitations, onTurnPersisted, pushUser, updateMessage],
+    [addAssistantPlaceholder, applyConversationId, onCitations, onTurnPersisted, updateMessage],
   );
 
-  // Generic non-streaming Answer-producing request.
-  const runAnswer = useCallback(
-    async (userContent: string, run: () => Promise<Answer>) => {
-      pushUser(userContent);
-      const assistantId = uid();
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: assistantId,
-          role: "assistant",
-          content: "",
-          citations: [],
-          pending: true,
-        },
-      ]);
+  const generateDocs = useCallback(
+    (question: string, collection: string) =>
+      runStream((handlers) =>
+        chatStream(
+          {
+            question,
+            collection,
+            stream: true,
+            conversation_id: conversationIdRef.current,
+          },
+          handlers,
+        ),
+      ),
+    [runStream],
+  );
+
+  const generateRepo = useCallback(
+    (question: string, repositoryId: string) =>
+      runStream((handlers) =>
+        repositoryChatStream(
+          repositoryId,
+          { question, conversation_id: conversationIdRef.current },
+          handlers,
+        ),
+      ),
+    [runStream],
+  );
+
+  // ── Non-streaming generation (debug + pair) ──────────────────────
+  const generateAnswer = useCallback(
+    async (run: () => Promise<Answer>) => {
+      const assistantId = addAssistantPlaceholder();
       setIsBusy(true);
       try {
         const answer = await run();
@@ -222,52 +229,12 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
         setIsBusy(false);
       }
     },
-    [applyConversationId, onCitations, onTurnPersisted, pushUser, updateMessage],
+    [addAssistantPlaceholder, applyConversationId, onCitations, onTurnPersisted, updateMessage],
   );
 
-  const sendRepo = useCallback(
-    (question: string, repositoryId: string) =>
-      runAnswer(question, () =>
-        repositoryChat(repositoryId, {
-          question,
-          conversation_id: conversationIdRef.current,
-        }),
-      ),
-    [runAnswer],
-  );
-
-  const sendDebug = useCallback(
-    (req: DebugRequest) => {
-      const summary = `Debug: ${req.error.split("\n")[0].slice(0, 120)}`;
-      return runAnswer(summary, () => debugError(req));
-    },
-    [runAnswer],
-  );
-
-  const sendPair = useCallback(
-    (req: PairRequest) => {
-      const summary = `Pair (${req.action})${
-        req.instructions ? `: ${req.instructions}` : ""
-      }`;
-      return runAnswer(summary, () => pairProgram(req));
-    },
-    [runAnswer],
-  );
-
-  const sendSearch = useCallback(
+  const generateSearch = useCallback(
     async (query: string, topK: number, repositoryId?: string | null) => {
-      pushUser(`Search: ${query}`);
-      const assistantId = uid();
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: assistantId,
-          role: "assistant",
-          content: "",
-          citations: [],
-          pending: true,
-        },
-      ]);
+      const assistantId = addAssistantPlaceholder();
       setIsBusy(true);
       try {
         const res = await searchCode({
@@ -292,16 +259,87 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
         setIsBusy(false);
       }
     },
-    [onCitations, pushUser, updateMessage],
+    [addAssistantPlaceholder, onCitations, updateMessage],
   );
+
+  // ── Public send actions (push the user message, then generate) ───
+  const sendDocs = useCallback(
+    (question: string, collection: string) => {
+      pushUser(question);
+      lastGenRef.current = () => generateDocs(question, collection);
+      return generateDocs(question, collection);
+    },
+    [generateDocs, pushUser],
+  );
+
+  const sendRepo = useCallback(
+    (question: string, repositoryId: string) => {
+      pushUser(question);
+      lastGenRef.current = () => generateRepo(question, repositoryId);
+      return generateRepo(question, repositoryId);
+    },
+    [generateRepo, pushUser],
+  );
+
+  const sendDebug = useCallback(
+    (req: DebugRequest) => {
+      const summary = `Debug: ${req.error.split("\n")[0].slice(0, 120)}`;
+      pushUser(summary);
+      lastGenRef.current = () => generateAnswer(() => debugError(req));
+      return generateAnswer(() => debugError(req));
+    },
+    [generateAnswer, pushUser],
+  );
+
+  const sendPair = useCallback(
+    (req: PairRequest) => {
+      const summary = `Pair (${req.action})${
+        req.instructions ? `: ${req.instructions}` : ""
+      }`;
+      pushUser(summary);
+      lastGenRef.current = () => generateAnswer(() => pairProgram(req));
+      return generateAnswer(() => pairProgram(req));
+    },
+    [generateAnswer, pushUser],
+  );
+
+  const sendSearch = useCallback(
+    (query: string, topK: number, repositoryId?: string | null) => {
+      pushUser(`Search: ${query}`);
+      lastGenRef.current = () => generateSearch(query, topK, repositoryId);
+      return generateSearch(query, topK, repositoryId);
+    },
+    [generateSearch, pushUser],
+  );
+
+  // Re-run the last turn's answer, replacing the previous assistant message.
+  const regenerate = useCallback(() => {
+    const gen = lastGenRef.current;
+    if (!gen || isBusy) return;
+    setMessages((prev) => {
+      const copy = [...prev];
+      for (let i = copy.length - 1; i >= 0; i--) {
+        if (copy[i].role === "assistant") {
+          copy.splice(i, 1);
+          break;
+        }
+      }
+      return copy;
+    });
+    void gen();
+  }, [isBusy]);
+
+  const canRegenerate = lastGenRef.current !== null;
 
   return {
     messages,
     isBusy,
     conversationId,
+    canRegenerate,
     clear,
     newChat,
     loadConversation,
+    regenerate,
     stop,
     sendDocs,
     sendRepo,

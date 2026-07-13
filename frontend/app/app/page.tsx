@@ -426,6 +426,8 @@ function Workspace() {
             onSelectCitation={handleSelectCitation}
             onStop={chat.stop}
             onClear={chat.clear}
+            onRegenerate={chat.regenerate}
+            canRegenerate={chat.canRegenerate}
             onSendDocs={chat.sendDocs}
             onSendRepo={chat.sendRepo}
             onSendSearch={chat.sendSearch}
