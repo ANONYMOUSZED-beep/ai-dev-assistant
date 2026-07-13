@@ -232,6 +232,28 @@ function AuthScreen({
             ? "New here? Create an account"
             : "Already have an account? Sign in"}
         </button>
+
+        <p className="mt-4 text-center text-[0.7rem] leading-relaxed text-[#8a91a0]">
+          By continuing you agree to our{" "}
+          <a
+            href="/terms"
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-2 hover:text-[#1e325a]"
+          >
+            Terms
+          </a>{" "}
+          and{" "}
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-2 hover:text-[#1e325a]"
+          >
+            Privacy Policy
+          </a>
+          .
+        </p>
       </div>
     </div>
   );

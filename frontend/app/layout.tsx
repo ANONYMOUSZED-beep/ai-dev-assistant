@@ -1,10 +1,39 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+const APP_NAME = "AI Developer Assistant";
+const APP_DESCRIPTION =
+  "Chat with your documents and code, search codebases, debug errors, and " +
+  "pair-program — every answer grounded in cited sources.";
+
 export const metadata: Metadata = {
-  title: "AI Developer Assistant",
-  description:
-    "An IDE-style assistant for documentation chat, repository Q&A, code search, debugging, and pair programming.",
+  title: {
+    default: APP_NAME,
+    template: `%s · ${APP_NAME}`,
+  },
+  description: APP_DESCRIPTION,
+  applicationName: APP_NAME,
+  keywords: [
+    "AI developer assistant",
+    "documentation chat",
+    "code search",
+    "RAG",
+    "debug",
+    "pair programming",
+  ],
+  authors: [{ name: "AI Developer Assistant" }],
+  openGraph: {
+    type: "website",
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
+    siteName: APP_NAME,
+  },
+  twitter: {
+    card: "summary",
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
+  },
+  robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {
