@@ -120,3 +120,36 @@ async def test_google_sign_in_rejects_invalid_token(
         "/api/v1/auth/google", json={"credential": "whatever"}
     )
     assert resp.status_code == 401
+
+
+async def test_export_my_data(db_client: AsyncClient) -> None:
+    reg = await db_client.post(
+        "/api/v1/auth/register", json={"username": "erin", "password": "hunter2"}
+    )
+    token = reg.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    await db_client.post(
+        "/api/v1/chat", json={"question": "hello?"}, headers=headers
+    )
+
+    resp = await db_client.get("/api/v1/auth/me/export", headers=headers)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["account"]["username"] == "erin"
+    assert len(body["conversations"]) == 1
+    assert "repositories" in body
+
+
+async def test_delete_account_removes_access(db_client: AsyncClient) -> None:
+    reg = await db_client.post(
+        "/api/v1/auth/register", json={"username": "frank", "password": "hunter2"}
+    )
+    token = reg.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    deleted = await db_client.delete("/api/v1/auth/me", headers=headers)
+    assert deleted.status_code == 200
+
+    # The token now refers to a user that no longer exists.
+    me = await db_client.get("/api/v1/auth/me", headers=headers)
+    assert me.status_code == 401

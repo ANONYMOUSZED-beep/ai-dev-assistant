@@ -413,3 +413,13 @@ export function googleLogin(credential: string): Promise<AuthToken> {
 export function fetchMe(): Promise<CurrentUser> {
   return request<CurrentUser>("/auth/me", { method: "GET" });
 }
+
+/** Fetch a full export of the current user's data (account, repos, chats). */
+export function exportMyData(): Promise<unknown> {
+  return request<unknown>("/auth/me/export", { method: "GET" });
+}
+
+/** Permanently delete the current user's account and all their data. */
+export function deleteAccount(): Promise<{ deleted: string }> {
+  return request<{ deleted: string }>("/auth/me", { method: "DELETE" });
+}
