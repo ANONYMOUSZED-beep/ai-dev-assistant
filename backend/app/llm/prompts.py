@@ -75,6 +75,20 @@ def build_repo_qa_messages(question: str, chunks: list[RetrievedChunk]) -> list[
     return [LLMMessage(role=Role.SYSTEM, content=system), LLMMessage(role=Role.USER, content=user)]
 
 
+def build_repo_overview_messages(chunks: list[RetrievedChunk]) -> list[LLMMessage]:
+    system = (
+        "You are a senior engineer writing a concise onboarding overview of a repository "
+        "from the provided code context. Produce a one-page markdown tour with these "
+        "sections: 'What this project is', 'Key modules & entry points', 'How to run it' "
+        "(best-effort, only if inferable from the context), and 'Where to look next'. "
+        "Cite files with [n] using the numbered context. Keep it grounded: if something "
+        "is not evident from the context, say so briefly rather than inventing it. "
+        + _CITATION_RULES
+    )
+    user = f"Repository context:\n{format_context(chunks)}"
+    return [LLMMessage(role=Role.SYSTEM, content=system), LLMMessage(role=Role.USER, content=user)]
+
+
 def build_debug_messages(
     error: str,
     chunks: list[RetrievedChunk],

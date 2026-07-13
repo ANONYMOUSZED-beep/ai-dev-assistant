@@ -84,6 +84,23 @@ class RepositoryService:
             answer.follow_ups = []
         return answer
 
+    async def generate_overview(self, repository_id: str) -> Answer:
+        """Generate a one-page architecture tour grounded in the indexed repository."""
+        chunks = await self._rag.retrieve(
+            "architecture overview entry point how to run main modules",
+            repo_collection(repository_id),
+        )
+        if not chunks:
+            return Answer(text="", citations=[])
+        messages = prompts.build_repo_overview_messages(chunks)
+        response = await self._llm.generate(messages)
+        return Answer(
+            text=response.content,
+            citations=build_citations(chunks),
+            model=response.model,
+            provider=response.provider,
+        )
+
     async def follow_ups(self, question: str, answer_text: str) -> list[str]:
         """Suggest up to 3 short follow-up questions for the given Q&A."""
         response = await self._llm.generate(

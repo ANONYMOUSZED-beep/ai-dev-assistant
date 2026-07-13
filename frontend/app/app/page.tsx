@@ -7,6 +7,7 @@ import ActivityBar from "@/components/ActivityBar";
 import AuthGate from "@/components/AuthGate";
 import ChatPanel from "@/components/ChatPanel";
 import CitationsList from "@/components/CitationsList";
+import CommandPalette from "@/components/CommandPalette";
 import CodeViewer from "@/components/CodeViewer";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
@@ -20,6 +21,7 @@ import {
   listConversations,
   listRepositories,
 } from "@/lib/api";
+import { DOC_COLLECTIONS } from "@/lib/collections";
 import { citationToSource } from "@/lib/lang";
 import { humanizeError } from "@/lib/errors";
 import {
@@ -386,6 +388,19 @@ function Workspace() {
           handleModeChange(pickedMode);
           dismissGuide();
         }}
+      />
+
+      <CommandPalette
+        mode={mode}
+        onModeChange={handleModeChange}
+        collections={[...DOC_COLLECTIONS, ...customCollections]}
+        onSelectCollection={setCollection}
+        repositories={repositories}
+        onSelectRepo={setSelectedRepoId}
+        conversations={conversations}
+        onSelectConversation={handleSelectConversation}
+        onNewChat={chat.newChat}
+        onOpenGuide={() => setGuideOpen(true)}
       />
 
       <TopBar

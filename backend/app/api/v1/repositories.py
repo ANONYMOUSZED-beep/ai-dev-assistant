@@ -53,15 +53,44 @@ async def _index_repo(
             return
         repo.status = IndexStatus.INDEXING.value
         await session.commit()
+        succeeded = False
         try:
             files, chunks = await service.index(repository_id, url, branch)
             repo.files_indexed, repo.chunks_indexed = files, chunks
             repo.status = IndexStatus.READY.value
+            succeeded = True
         except Exception as exc:  # noqa: BLE001 - network/IO dependent
             logger.exception("Repository indexing failed")
             repo.status = IndexStatus.FAILED.value
             repo.error = str(exc)
         await session.commit()
+
+        if not succeeded:
+            return
+
+        # Best-effort: generate a one-page architecture tour and save it as a
+        # conversation so it shows up in the user's History. A failure here must
+        # not flip the repo status — indexing already succeeded.
+        try:
+            overview = await service.generate_overview(repository_id)
+            if overview.text:
+                convo = ConversationService(session)
+                conversation = await convo.create(
+                    user_id=repo.user_id,
+                    kind="repo",
+                    title="Repository overview",
+                    collection=repo.collection,
+                    repository_id=repo.id,
+                )
+                await convo.add_message(
+                    conversation, "user", "Give me an overview of this repository"
+                )
+                await convo.add_message(
+                    conversation, "assistant", overview.text, overview.citations
+                )
+                await session.commit()
+        except Exception:  # noqa: BLE001 - overview is best-effort, never break indexing
+            logger.warning("Repository overview generation failed", exc_info=True)
 
 
 @router.post("", response_model=RepositoryResponse, status_code=202)
