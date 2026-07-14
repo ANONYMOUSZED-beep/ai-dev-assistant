@@ -443,6 +443,7 @@ function Workspace() {
             onClear={chat.clear}
             onRegenerate={chat.regenerate}
             canRegenerate={chat.canRegenerate}
+            conversationId={chat.conversationId}
             onSendDocs={chat.sendDocs}
             onSendRepo={chat.sendRepo}
             onSendSearch={chat.sendSearch}

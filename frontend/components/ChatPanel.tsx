@@ -2,6 +2,7 @@
 
 import {
   Bug,
+  Check,
   CornerDownLeft,
   FileText,
   GitBranch,
@@ -9,12 +10,17 @@ import {
   type LucideIcon,
   RefreshCw,
   Search,
+  Share2,
   Sparkles,
   Square,
   Trash2,
 } from "lucide-react";
+
+import { shareConversation } from "@/lib/api";
 import { useEffect, useRef, useState } from "react";
 
+import { uploadDocument } from "@/lib/api";
+import { humanizeError } from "@/lib/errors";
 import { DOC_COLLECTIONS } from "@/lib/collections";
 import type {
   ChatMessage,
@@ -40,6 +46,7 @@ interface ChatPanelProps {
   onClear: () => void;
   onRegenerate: () => void;
   canRegenerate: boolean;
+  conversationId: string | null;
   onSendDocs: (question: string, collection: string) => void;
   onSendRepo: (question: string, repositoryId: string) => void;
   onSendSearch: (
@@ -264,6 +271,7 @@ export default function ChatPanel({
   onClear,
   onRegenerate,
   canRegenerate,
+  conversationId,
   onSendDocs,
   onSendRepo,
   onSendSearch,
@@ -272,11 +280,104 @@ export default function ChatPanel({
 }: ChatPanelProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [repoOnlySearch, setRepoOnlySearch] = useState(true);
+  const [sharing, setSharing] = useState(false);
+  const [shared, setShared] = useState(false);
+
+  const handleShare = async () => {
+    if (!conversationId || sharing) return;
+    setSharing(true);
+    try {
+      const res = await shareConversation(conversationId);
+      const url = `${window.location.origin}${res.url_path}`;
+      await navigator.clipboard.writeText(url);
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    } catch {
+      /* ignore share failures */
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  // Drag-and-drop file ingestion (docs mode only). `dragOver` toggles the
+  // overlay; `uploadStatus` shows a lightweight in-panel progress/result line.
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<{
+    kind: "uploading" | "success" | "error";
+    text: string;
+  } | null>(null);
+  const dragDepth = useRef(0);
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
+
+  // Clear any pending auto-dismiss timer on unmount.
+  useEffect(() => {
+    return () => {
+      if (successTimer.current) clearTimeout(successTimer.current);
+    };
+  }, []);
+
+  const dropEnabled = mode === "docs";
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!dropEnabled) return;
+    // Only react to actual file drags, not text/element selections.
+    if (!Array.from(e.dataTransfer.types ?? []).includes("Files")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setDragOver(true);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    if (!dropEnabled) return;
+    if (!Array.from(e.dataTransfer.types ?? []).includes("Files")) return;
+    e.preventDefault();
+    dragDepth.current += 1;
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!dropEnabled) return;
+    e.preventDefault();
+    dragDepth.current = Math.max(0, dragDepth.current - 1);
+    if (dragDepth.current === 0) setDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (!dropEnabled) return;
+    e.preventDefault();
+    dragDepth.current = 0;
+    setDragOver(false);
+
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return; // ignore non-file drags
+    const file = files[0];
+
+    if (successTimer.current) {
+      clearTimeout(successTimer.current);
+      successTimer.current = null;
+    }
+    setUploadStatus({ kind: "uploading", text: `Uploading ${file.name}…` });
+
+    uploadDocument(collection, file)
+      .then((res) => {
+        setUploadStatus({
+          kind: "success",
+          text: `Added ${file.name} — ${res.chunks_indexed} sections. Ask a question about it below.`,
+        });
+        successTimer.current = setTimeout(() => {
+          setUploadStatus(null);
+          successTimer.current = null;
+        }, 6000);
+      })
+      .catch((err) => {
+        setUploadStatus({ kind: "error", text: humanizeError(err) });
+      });
+  };
 
   const selectedRepo =
     repositories.find((r) => r.id === selectedRepoId) ?? null;
@@ -301,9 +402,29 @@ export default function ChatPanel({
 
   return (
     <section
-      className="flex h-full min-w-0 flex-1 flex-col bg-ide-bg"
+      className="relative flex h-full min-w-0 flex-1 flex-col bg-ide-bg"
       aria-label="Conversation"
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
+      {dropEnabled && dragOver ? (
+        <div
+          className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-ide-bg/80 p-6 backdrop-blur-sm"
+          aria-hidden="true"
+        >
+          <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-ide-accent bg-ide-panel/90 px-8 py-10 text-center shadow-lg">
+            <FileText size={28} className="text-ide-accent" />
+            <p className="text-sm font-medium text-ide-text">
+              {"Drop a file to add it to this knowledge base"}
+            </p>
+            <p className="text-xs text-ide-muted">
+              {"PDF, DOCX, Markdown, TXT, or HTML"}
+            </p>
+          </div>
+        </div>
+      ) : null}
       <div className="flex items-center justify-between border-b border-ide-border bg-ide-panel/40 px-4 py-2 text-[0.7rem] text-ide-muted">
         <span className="truncate">{MODE_HINTS[mode]}</span>
         <div className="flex items-center gap-2">
@@ -324,6 +445,22 @@ export default function ChatPanel({
               className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-ide-hover hover:text-ide-text focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent"
             >
               <RefreshCw size={11} aria-hidden="true" /> Regenerate
+            </button>
+          ) : null}
+          {!isBusy && conversationId && messages.length > 0 ? (
+            <button
+              type="button"
+              onClick={handleShare}
+              disabled={sharing}
+              title="Copy a public read-only link to this chat"
+              className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-ide-hover hover:text-ide-text focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent disabled:opacity-50"
+            >
+              {shared ? (
+                <Check size={11} aria-hidden="true" />
+              ) : (
+                <Share2 size={11} aria-hidden="true" />
+              )}
+              {shared ? "Copied link" : "Share"}
             </button>
           ) : null}
           <button
@@ -431,6 +568,26 @@ export default function ChatPanel({
           </div>
         );
       })()}
+
+      {dropEnabled && uploadStatus ? (
+        <div
+          role="status"
+          className={`flex items-center gap-2 border-t border-ide-border px-4 py-2 text-xs ${
+            uploadStatus.kind === "error"
+              ? "bg-ide-danger/10 text-ide-danger"
+              : uploadStatus.kind === "success"
+                ? "bg-ide-success/10 text-ide-success"
+                : "bg-ide-panel/60 text-ide-muted"
+          }`}
+        >
+          {uploadStatus.kind === "uploading" ? (
+            <Loader2 size={13} className="flex-none animate-spin" aria-hidden="true" />
+          ) : (
+            <FileText size={13} className="flex-none" aria-hidden="true" />
+          )}
+          <span className="min-w-0 flex-1">{uploadStatus.text}</span>
+        </div>
+      ) : null}
 
       <div className="border-t border-ide-border bg-ide-panel">
         <div key={mode} className="msg-in">

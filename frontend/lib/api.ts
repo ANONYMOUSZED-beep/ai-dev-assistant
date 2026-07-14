@@ -413,6 +413,26 @@ export function getConversation(id: string): Promise<ConversationDetail> {
   );
 }
 
+/** Publish a conversation as a public read-only link (idempotent). */
+export function shareConversation(
+  id: string,
+): Promise<{ share_id: string; url_path: string }> {
+  return request<{ share_id: string; url_path: string }>(
+    `/conversations/${encodeURIComponent(id)}/share`,
+    { method: "POST" },
+  );
+}
+
+/** Fetch a publicly shared conversation by its share id (no auth required). */
+export function getSharedConversation(
+  shareId: string,
+): Promise<ConversationDetail> {
+  return request<ConversationDetail>(
+    `/share/${encodeURIComponent(shareId)}`,
+    { method: "GET" },
+  );
+}
+
 export function renameConversation(
   id: string,
   title: string,
