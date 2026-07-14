@@ -47,6 +47,24 @@ _REPO_REDIRECT_RULE = (
 )
 
 
+def build_follow_up_messages(question: str, answer: str) -> list[LLMMessage]:
+    """Ask the model for a few natural follow-up questions a user might ask next."""
+    system = (
+        "You suggest concise follow-up questions. Given a question and its answer, "
+        "propose 3 short, specific follow-up questions the user is likely to ask next. "
+        "Return ONLY the questions, one per line, with no numbering, bullets, or extra "
+        "text. Each question must be under 12 words."
+    )
+    user = (
+        f"Question: {question}\n\nAnswer: {answer[:1500]}\n\n"
+        "Three follow-up questions:"
+    )
+    return [
+        LLMMessage(role=Role.SYSTEM, content=system),
+        LLMMessage(role=Role.USER, content=user),
+    ]
+
+
 def build_doc_qa_messages(question: str, chunks: list[RetrievedChunk]) -> list[LLMMessage]:
     system = (
         "You are an expert software engineering assistant answering questions using "

@@ -10,6 +10,7 @@ from app.core.deps import CurrentUserDep, LLMDep, RagDep, SessionDep
 from app.schemas.chat import Answer, ChatRequest
 from app.services.chat_service import ChatService
 from app.services.conversation_service import ConversationService
+from app.services.enrich import generate_follow_ups
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -96,6 +97,13 @@ async def chat_stream(
         await convo.add_message(conversation, "user", req.question)
         await convo.add_message(conversation, "assistant", acc, citations)
         await session.commit()
+
+        follow_ups = await generate_follow_ups(llm, req.question, acc)
+        if follow_ups:
+            yield {
+                "event": "followups",
+                "data": orjson.dumps(follow_ups).decode(),
+            }
 
         yield {"event": "done", "data": ""}
 

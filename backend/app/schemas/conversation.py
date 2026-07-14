@@ -44,3 +44,10 @@ class ConversationDetail(ConversationSummary):
 
 class RenameConversationRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=512)
+
+
+class ShareResponse(BaseModel):
+    """Result of publishing a conversation as a public read-only link."""
+
+    share_id: str
+    url_path: str

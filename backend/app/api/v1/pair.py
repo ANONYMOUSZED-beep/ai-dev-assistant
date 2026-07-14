@@ -9,6 +9,7 @@ from sse_starlette.sse import EventSourceResponse
 from app.core.deps import CurrentUserDep, LLMDep, RagDep, SessionDep
 from app.schemas.chat import Answer, PairRequest
 from app.services.conversation_service import ConversationService
+from app.services.enrich import generate_follow_ups
 from app.services.pair_service import PairService
 
 router = APIRouter(prefix="/pair", tags=["pair"])
@@ -88,6 +89,13 @@ async def pair_stream(
         await convo.add_message(conversation, "user", title)
         await convo.add_message(conversation, "assistant", acc, citations)
         await session.commit()
+
+        follow_ups = await generate_follow_ups(llm, f"{req.action} this code", acc)
+        if follow_ups:
+            yield {
+                "event": "followups",
+                "data": orjson.dumps(follow_ups).decode(),
+            }
         yield {"event": "done", "data": ""}
 
     return EventSourceResponse(event_generator())

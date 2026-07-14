@@ -104,6 +104,10 @@ class Conversation(Base):
     collection: Mapped[str | None] = mapped_column(String(128), nullable=True)
     # For repo chats: the repository this conversation is about.
     repository_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    # Public share token: when set, the conversation is viewable read-only by anyone.
+    share_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, unique=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_now, onupdate=_now

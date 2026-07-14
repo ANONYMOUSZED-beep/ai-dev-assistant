@@ -7,6 +7,7 @@ assistant message, letting users revisit older chats.
 
 from __future__ import annotations
 
+import secrets
 from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select
@@ -65,27 +66,21 @@ class ConversationService:
         conv = await self._session.get(Conversation, conversation_id)
         if conv is None or conv.user_id != user_id:
             return None
-        messages = (
+        return await self._detail_for(conv)
+
+    async def get_by_share_id(self, share_id: str) -> ConversationDetail | None:
+        """Return a conversation by its public share token (NO owner check).
+
+        This powers the public, unauthenticated read-only share view.
+        """
+        conv = (
             await self._session.execute(
-                select(Message)
-                .where(Message.conversation_id == conversation_id)
-                .order_by(Message.created_at)
+                select(Conversation).where(Conversation.share_id == share_id)
             )
-        ).scalars().all()
-        summary = self._to_summary(conv, len(messages))
-        return ConversationDetail(
-            **summary.model_dump(),
-            messages=[
-                MessageOut(
-                    id=m.id,
-                    role=m.role,  # type: ignore[arg-type]
-                    content=m.content,
-                    citations=m.citations or [],
-                    created_at=m.created_at,
-                )
-                for m in messages
-            ],
-        )
+        ).scalar_one_or_none()
+        if conv is None:
+            return None
+        return await self._detail_for(conv)
 
     # ── Writes ───────────────────────────────────────────────────
     async def create(
@@ -176,6 +171,30 @@ class ConversationService:
         await self._session.commit()
         return conv.id
 
+    async def share(self, user_id: str, conversation_id: str) -> str | None:
+        """Publish a conversation and return its share token (idempotent).
+
+        Returns None if the conversation is not owned by ``user_id``. If it already
+        has a share token, that same token is returned; otherwise a new one is
+        generated and persisted.
+        """
+        conv = await self._session.get(Conversation, conversation_id)
+        if conv is None or conv.user_id != user_id:
+            return None
+        if not conv.share_id:
+            conv.share_id = secrets.token_urlsafe(16)
+            await self._session.commit()
+        return conv.share_id
+
+    async def unshare(self, user_id: str, conversation_id: str) -> bool:
+        """Revoke a conversation's public share link. Returns False if not owned."""
+        conv = await self._session.get(Conversation, conversation_id)
+        if conv is None or conv.user_id != user_id:
+            return False
+        conv.share_id = None
+        await self._session.commit()
+        return True
+
     async def delete(self, user_id: str, conversation_id: str) -> bool:
         conv = await self._session.get(Conversation, conversation_id)
         if conv is None or conv.user_id != user_id:
@@ -202,6 +221,30 @@ class ConversationService:
         return self._to_summary(conv, count)
 
     # ── Helpers ──────────────────────────────────────────────────
+    async def _detail_for(self, conv: Conversation) -> ConversationDetail:
+        """Build a ConversationDetail (summary + full message history) for ``conv``."""
+        messages = (
+            await self._session.execute(
+                select(Message)
+                .where(Message.conversation_id == conv.id)
+                .order_by(Message.created_at)
+            )
+        ).scalars().all()
+        summary = self._to_summary(conv, len(messages))
+        return ConversationDetail(
+            **summary.model_dump(),
+            messages=[
+                MessageOut(
+                    id=m.id,
+                    role=m.role,  # type: ignore[arg-type]
+                    content=m.content,
+                    citations=m.citations or [],
+                    created_at=m.created_at,
+                )
+                for m in messages
+            ],
+        )
+
     @staticmethod
     def _to_summary(conv: Conversation, message_count: int) -> ConversationSummary:
         return ConversationSummary(

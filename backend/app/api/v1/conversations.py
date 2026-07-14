@@ -11,6 +11,7 @@ from app.schemas.conversation import (
     ConversationKind,
     ConversationSummary,
     RenameConversationRequest,
+    ShareResponse,
 )
 from app.services.conversation_service import ConversationService
 
@@ -65,3 +66,27 @@ async def delete_conversation(
     if not ok:
         raise NotFoundError(f"Conversation {conversation_id} not found")
     return {"deleted": conversation_id}
+
+
+@router.post("/{conversation_id}/share", response_model=ShareResponse)
+async def share_conversation(
+    conversation_id: str, session: SessionDep, current_user: CurrentUserDep
+) -> ShareResponse:
+    """Publish a conversation and return its public read-only link (idempotent)."""
+    service = ConversationService(session)
+    share_id = await service.share(current_user.id, conversation_id)
+    if share_id is None:
+        raise NotFoundError(f"Conversation {conversation_id} not found")
+    return ShareResponse(share_id=share_id, url_path=f"/share/{share_id}")
+
+
+@router.delete("/{conversation_id}/share")
+async def unshare_conversation(
+    conversation_id: str, session: SessionDep, current_user: CurrentUserDep
+) -> dict[str, str]:
+    """Revoke a conversation's public share link."""
+    service = ConversationService(session)
+    ok = await service.unshare(current_user.id, conversation_id)
+    if not ok:
+        raise NotFoundError(f"Conversation {conversation_id} not found")
+    return {"unshared": conversation_id}

@@ -10,6 +10,7 @@ from app.core.deps import CurrentUserDep, LLMDep, RagDep, SessionDep
 from app.schemas.chat import Answer, DebugRequest
 from app.services.conversation_service import ConversationService
 from app.services.debug_service import DebugService
+from app.services.enrich import generate_follow_ups
 
 router = APIRouter(prefix="/debug", tags=["debug"])
 
@@ -89,6 +90,13 @@ async def debug_stream(
         await convo.add_message(conversation, "user", summary)
         await convo.add_message(conversation, "assistant", acc, citations)
         await session.commit()
+
+        follow_ups = await generate_follow_ups(llm, req.error, acc)
+        if follow_ups:
+            yield {
+                "event": "followups",
+                "data": orjson.dumps(follow_ups).decode(),
+            }
         yield {"event": "done", "data": ""}
 
     return EventSourceResponse(event_generator())
