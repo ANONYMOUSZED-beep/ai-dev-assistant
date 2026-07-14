@@ -129,6 +129,7 @@ export function chat(req: ChatRequest): Promise<Answer> {
 export interface StreamHandlers {
   onMeta?: (meta: { conversation_id: string }) => void;
   onCitations?: (citations: Citation[]) => void;
+  onGrounding?: (confidence: number) => void;
   onToken?: (token: string) => void;
   onFollowups?: (questions: string[]) => void;
   onDone?: () => void;
@@ -246,6 +247,15 @@ async function streamSSE(
           handlers.onCitations?.(parsed);
         } catch {
           // Ignore malformed citation payloads.
+        }
+        break;
+      }
+      case "grounding": {
+        try {
+          const parsed = JSON.parse(data) as { confidence: number };
+          handlers.onGrounding?.(parsed.confidence);
+        } catch {
+          // Ignore malformed grounding payloads.
         }
         break;
       }

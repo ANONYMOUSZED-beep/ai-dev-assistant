@@ -6,6 +6,7 @@ prompt, generate (or stream) an answer, and attach citations.
 
 from __future__ import annotations
 
+import math
 from collections.abc import AsyncIterator
 
 from app.core.logging import get_logger
@@ -14,6 +15,7 @@ from app.llm.base import BaseLLMProvider
 from app.rag.contracts import build_citations
 from app.rag.pipeline import RagPipeline
 from app.schemas.chat import Answer
+from app.schemas.rag import RetrievedChunk
 
 logger = get_logger(__name__)
 
@@ -25,6 +27,26 @@ _NO_CONTEXT_MESSAGE = (
     "different knowledge base. I only answer from the documents you've indexed so I can "
     "cite real sources."
 )
+
+
+def _grounding_confidence(chunks: list[RetrievedChunk]) -> float | None:
+    """Aggregate how well retrieved context supports an answer, as a [0,1] score.
+
+    Uses the top chunks' cross-encoder rerank logits (bge-reranker-v2-m3, roughly
+    -10..+10) mapped through a sigmoid, so a strongly relevant top hit yields high
+    confidence and irrelevant context yields low. Falls back to the fused [0,1]
+    score when rerank scores are absent.
+    """
+    if not chunks:
+        return None
+    top = chunks[: min(3, len(chunks))]
+    scores = [
+        1.0 / (1.0 + math.exp(-rc.rerank_score))
+        if rc.rerank_score is not None
+        else rc.score
+        for rc in top
+    ]
+    return sum(scores) / len(scores)
 
 
 def _clean_follow_ups(text: str) -> list[str]:
@@ -66,6 +88,7 @@ class ChatService:
             citations=build_citations(chunks),
             model=response.model,
             provider=response.provider,
+            confidence=_grounding_confidence(chunks),
         )
         try:
             answer.follow_ups = await self.follow_ups(question, response.content)
@@ -94,4 +117,8 @@ class ChatService:
     async def retrieve_citations(self, question: str, collection: str = "docs") -> Answer:
         """Return citations only (used to enrich a streamed answer)."""
         chunks = await self._rag.retrieve(question, collection)
-        return Answer(text="", citations=build_citations(chunks))
+        return Answer(
+            text="",
+            citations=build_citations(chunks),
+            confidence=_grounding_confidence(chunks),
+        )

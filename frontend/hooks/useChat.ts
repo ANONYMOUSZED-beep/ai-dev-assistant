@@ -153,6 +153,9 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
           updateMessage(assistantId, { citations });
           onCitations?.(citations);
         },
+        onGrounding: (confidence) => {
+          updateMessage(assistantId, { confidence });
+        },
         onToken: (token) => {
           acc += token;
           updateMessage(assistantId, { content: acc });

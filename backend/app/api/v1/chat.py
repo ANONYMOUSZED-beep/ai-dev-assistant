@@ -74,13 +74,17 @@ async def chat_stream(
             "event": "meta",
             "data": orjson.dumps({"conversation_id": conversation.id}).decode(),
         }
-        citations = (
-            await service.retrieve_citations(req.question, req.collection)
-        ).citations
+        grounding = await service.retrieve_citations(req.question, req.collection)
+        citations = grounding.citations
         yield {
             "event": "citations",
             "data": orjson.dumps([c.model_dump() for c in citations]).decode(),
         }
+        if grounding.confidence is not None:
+            yield {
+                "event": "grounding",
+                "data": orjson.dumps({"confidence": grounding.confidence}).decode(),
+            }
         acc = ""
         async for token in service.stream(req.question, req.collection):
             acc += token

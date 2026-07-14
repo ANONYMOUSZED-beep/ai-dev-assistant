@@ -41,6 +41,29 @@ function linkifyCitations(text: string, validIndices: Set<number>): string {
     .join("");
 }
 
+/** Map a [0,1] grounding confidence to a labelled, colour-coded tier. */
+function groundingTier(confidence: number): {
+  label: string;
+  className: string;
+} {
+  if (confidence >= 0.66) {
+    return {
+      label: "Well grounded",
+      className: "border-ide-success/40 bg-ide-success/15 text-ide-success",
+    };
+  }
+  if (confidence >= 0.4) {
+    return {
+      label: "Moderately grounded",
+      className: "border-ide-warning/40 bg-ide-warning/15 text-ide-warning",
+    };
+  }
+  return {
+    label: "Thin evidence",
+    className: "border-ide-danger/40 bg-ide-danger/15 text-ide-danger",
+  };
+}
+
 /** Recursively pull the raw text out of a react-markdown code node. */
 function extractCodeText(node: ReactNode): string {
   if (typeof node === "string") return node;
@@ -179,8 +202,25 @@ export default function MessageBubble({
                   {copied ? <Check size={12} /> : <Copy size={12} />}
                   {copied ? "Copied" : "Copy"}
                 </button>
+                {typeof message.confidence === "number" ? (
+                  (() => {
+                    const tier = groundingTier(message.confidence);
+                    return (
+                      <span
+                        className={`ml-auto inline-flex items-center rounded border px-1.5 py-0.5 font-medium ${tier.className}`}
+                        title={`Grounding confidence: ${Math.round(
+                          message.confidence * 100,
+                        )}%`}
+                      >
+                        {tier.label}
+                      </span>
+                    );
+                  })()
+                ) : null}
                 {message.model || message.provider ? (
-                  <span className="ml-auto truncate">
+                  <span
+                    className={`truncate ${typeof message.confidence === "number" ? "" : "ml-auto"}`}
+                  >
                     {message.provider ? `${message.provider} · ` : ""}
                     {message.model ?? ""}
                   </span>

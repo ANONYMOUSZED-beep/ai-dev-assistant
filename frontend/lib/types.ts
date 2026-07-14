@@ -156,6 +156,7 @@ export interface ChatMessage {
   pending?: boolean;
   error?: boolean;
   followUps?: string[];
+  confidence?: number | null;
 }
 
 export interface DocCollection {
