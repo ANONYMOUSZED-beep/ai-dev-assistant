@@ -1,6 +1,7 @@
 "use client";
 
-import { Bot, Check, Copy, User } from "lucide-react";
+import { diffWords } from "diff";
+import { Bot, Check, Copy, GitCompare, User } from "lucide-react";
 import { isValidElement, useMemo, useState, type ReactNode } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -80,6 +81,12 @@ export default function MessageBubble({
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
+  const [showDiff, setShowDiff] = useState(false);
+
+  const diffParts = useMemo(() => {
+    if (!message.previousContent) return null;
+    return diffWords(message.previousContent, message.content);
+  }, [message.previousContent, message.content]);
 
   const copyMessage = async () => {
     try {
@@ -169,9 +176,28 @@ export default function MessageBubble({
           </p>
         ) : (
           <div className="markdown-body min-w-0">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-              {processed}
-            </ReactMarkdown>
+            {showDiff && diffParts ? (
+              <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                {diffParts.map((part, i) => (
+                  <span
+                    key={i}
+                    className={
+                      part.added
+                        ? "rounded bg-ide-success/20 text-ide-success"
+                        : part.removed
+                          ? "rounded bg-ide-danger/20 text-ide-danger line-through"
+                          : "text-ide-text"
+                    }
+                  >
+                    {part.value}
+                  </span>
+                ))}
+              </p>
+            ) : (
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+                {processed}
+              </ReactMarkdown>
+            )}
             {message.pending && message.content.length === 0 ? (
               <span
                 className="flex items-center gap-2 text-ide-muted"
@@ -202,6 +228,17 @@ export default function MessageBubble({
                   {copied ? <Check size={12} /> : <Copy size={12} />}
                   {copied ? "Copied" : "Copy"}
                 </button>
+                {diffParts ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowDiff((v) => !v)}
+                    aria-pressed={showDiff}
+                    className={`flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-ide-hover hover:text-ide-text focus:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent ${showDiff ? "text-ide-accent" : ""}`}
+                  >
+                    <GitCompare size={12} />
+                    {showDiff ? "Hide changes" : "Show changes"}
+                  </button>
+                ) : null}
                 {typeof message.confidence === "number" ? (
                   (() => {
                     const tier = groundingTier(message.confidence);

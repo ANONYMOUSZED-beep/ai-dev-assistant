@@ -69,6 +69,9 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
   const conversationIdRef = useRef<string | null>(null);
   // Replays just the assistant generation of the last turn (for "regenerate").
   const lastGenRef = useRef<(() => Promise<void>) | null>(null);
+  // Holds the prior answer's text between a regenerate trigger and the new
+  // placeholder, so the regenerated message can diff against it.
+  const pendingPrevRef = useRef<string | null>(null);
 
   const applyConversationId = useCallback((id: string | null) => {
     conversationIdRef.current = id;
@@ -93,9 +96,11 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
 
   const addAssistantPlaceholder = useCallback((): string => {
     const id = uid();
+    const previousContent = pendingPrevRef.current ?? undefined;
+    pendingPrevRef.current = null;
     setMessages((prev) => [
       ...prev,
-      { id, role: "assistant", content: "", citations: [], pending: true },
+      { id, role: "assistant", content: "", citations: [], pending: true, previousContent },
     ]);
     return id;
   }, []);
@@ -306,6 +311,10 @@ export function useChat({ onCitations, onTurnPersisted }: UseChatOptions = {}) {
       const copy = [...prev];
       for (let i = copy.length - 1; i >= 0; i--) {
         if (copy[i].role === "assistant") {
+          const old = copy[i];
+          if (!old.error && old.content.trim()) {
+            pendingPrevRef.current = old.previousContent ?? old.content;
+          }
           copy.splice(i, 1);
           break;
         }

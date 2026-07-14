@@ -76,7 +76,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
 
   if (status === "loading") {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#eef0f2] text-[#5e6470]">
+      <div className="flex h-screen items-center justify-center bg-ide-bg text-ide-muted">
         <span className="animate-pulse text-sm">Loading…</span>
       </div>
     );
@@ -140,19 +140,19 @@ function AuthScreen({
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#eef0f2] px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-[#e0e4ea] bg-white p-8 shadow-[0_20px_60px_rgba(30,50,90,0.08)]">
-        <div className="mb-6 flex items-center gap-2 text-[#1e325a]">
-          <Terminal size={20} className="text-[#24406e]" />
+    <div className="flex min-h-screen items-center justify-center bg-ide-bg px-4">
+      <div className="w-full max-w-sm rounded-2xl border border-ide-border bg-ide-panel p-8 shadow-2xl">
+        <div className="mb-6 flex items-center gap-2 text-ide-text">
+          <Terminal size={20} className="text-ide-accent" />
           <span className="font-display text-lg font-semibold">
             AI Developer Assistant
           </span>
         </div>
 
-        <h1 className="font-display text-xl font-semibold text-[#1e325a]">
+        <h1 className="font-display text-xl font-semibold text-ide-text">
           {mode === "login" ? "Welcome back" : "Create your account"}
         </h1>
-        <p className="mt-1 text-sm text-[#5e6470]">
+        <p className="mt-1 text-sm text-ide-muted">
           {mode === "login"
             ? "Sign in to access your workspace."
             : "A free account keeps your documents and chats private to you."}
@@ -160,7 +160,7 @@ function AuthScreen({
 
         <form onSubmit={submit} className="mt-6 space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-[#5e6470]">
+            <label className="mb-1 block text-xs font-medium text-ide-muted">
               Username
             </label>
             <input
@@ -169,12 +169,12 @@ function AuthScreen({
               autoComplete="username"
               required
               minLength={3}
-              className="w-full rounded-lg border border-[#d8dce2] bg-white px-3 py-2 text-sm text-[#1e325a] outline-none focus:border-[#24406e] focus:ring-1 focus:ring-[#24406e]"
+              className="w-full rounded-lg border border-ide-border bg-ide-bg px-3 py-2 text-sm text-ide-text outline-none focus:border-ide-accent focus:ring-1 focus:ring-ide-accent"
               placeholder="yourname"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-[#5e6470]">
+            <label className="mb-1 block text-xs font-medium text-ide-muted">
               Password
             </label>
             <div className="relative">
@@ -187,27 +187,27 @@ function AuthScreen({
                 }
                 required
                 minLength={6}
-                className="w-full rounded-lg border border-[#d8dce2] bg-white px-3 py-2 pr-10 text-sm text-[#1e325a] outline-none focus:border-[#24406e] focus:ring-1 focus:ring-[#24406e]"
+                className="w-full rounded-lg border border-ide-border bg-ide-bg px-3 py-2 pr-10 text-sm text-ide-text outline-none focus:border-ide-accent focus:ring-1 focus:ring-ide-accent"
                 placeholder="••••••••"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#8a91a0] hover:text-[#1e325a]"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-ide-muted hover:text-ide-text"
               >
                 {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
             {mode === "register" ? (
-              <p className="mt-1 text-[0.7rem] text-[#8a91a0]">
+              <p className="mt-1 text-[0.7rem] text-ide-muted">
                 At least 6 characters.
               </p>
             ) : null}
           </div>
 
           {error ? (
-            <p className="rounded-md bg-[#fdeceb] px-3 py-2 text-xs text-[#c0392b]">
+            <p className="rounded-md bg-ide-danger/10 px-3 py-2 text-xs text-ide-danger">
               {error}
             </p>
           ) : null}
@@ -215,7 +215,7 @@ function AuthScreen({
           <button
             type="submit"
             disabled={busy}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#1e325a] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#16264a] disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-ide-accent px-4 py-2.5 text-sm font-semibold text-ide-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {mode === "login" ? <LogIn size={16} /> : <UserPlus size={16} />}
             {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
@@ -224,10 +224,10 @@ function AuthScreen({
 
         {GOOGLE_CLIENT_ID ? (
           <>
-            <div className="my-4 flex items-center gap-3 text-[0.7rem] text-[#8a91a0]">
-              <span className="h-px flex-1 bg-[#e0e4ea]" />
+            <div className="my-4 flex items-center gap-3 text-[0.7rem] text-ide-muted">
+              <span className="h-px flex-1 bg-ide-border" />
               or
-              <span className="h-px flex-1 bg-[#e0e4ea]" />
+              <span className="h-px flex-1 bg-ide-border" />
             </div>
             <GoogleSignInButton
               onAuthenticated={onAuthenticated}
@@ -240,11 +240,11 @@ function AuthScreen({
           type="button"
           onClick={continueAsGuest}
           disabled={busy}
-          className="mt-3 w-full rounded-lg border border-[#d8dce2] bg-white px-4 py-2.5 text-sm font-medium text-[#1e325a] transition-colors hover:bg-[#f4f6f9] disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-3 w-full rounded-lg border border-ide-border bg-ide-panel px-4 py-2.5 text-sm font-medium text-ide-text transition-colors hover:bg-ide-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
           Continue as guest
         </button>
-        <p className="mt-1.5 text-center text-[0.7rem] text-[#8a91a0]">
+        <p className="mt-1.5 text-center text-[0.7rem] text-ide-muted">
           {"Try it instantly — no account needed. Some features are limited."}
         </p>
 
@@ -254,20 +254,20 @@ function AuthScreen({
             setMode(mode === "login" ? "register" : "login");
             setError(null);
           }}
-          className="mt-4 w-full text-center text-xs text-[#5e6470] hover:text-[#1e325a]"
+          className="mt-4 w-full text-center text-xs text-ide-muted hover:text-ide-text"
         >
           {mode === "login"
             ? "New here? Create an account"
             : "Already have an account? Sign in"}
         </button>
 
-        <p className="mt-4 text-center text-[0.7rem] leading-relaxed text-[#8a91a0]">
+        <p className="mt-4 text-center text-[0.7rem] leading-relaxed text-ide-muted">
           By continuing you agree to our{" "}
           <a
             href="/terms"
             target="_blank"
             rel="noreferrer"
-            className="underline underline-offset-2 hover:text-[#1e325a]"
+            className="underline underline-offset-2 hover:text-ide-text"
           >
             Terms
           </a>{" "}
@@ -276,7 +276,7 @@ function AuthScreen({
             href="/privacy"
             target="_blank"
             rel="noreferrer"
-            className="underline underline-offset-2 hover:text-[#1e325a]"
+            className="underline underline-offset-2 hover:text-ide-text"
           >
             Privacy Policy
           </a>

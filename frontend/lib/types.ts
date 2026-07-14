@@ -157,6 +157,7 @@ export interface ChatMessage {
   error?: boolean;
   followUps?: string[];
   confidence?: number | null;
+  previousContent?: string;
 }
 
 export interface DocCollection {
