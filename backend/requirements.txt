@@ -1,3 +1,11 @@
+# ─── PyTorch (CPU-only) ──────────────────────
+# This Space runs on CPU-only free hardware. Without the CPU index + local
+# "+cpu" pin, pip pulls the default PyPI torch wheel, which bundles the entire
+# NVIDIA CUDA stack (cuda-toolkit, cudnn, nccl, triton ...). That balloons the
+# image by several GB and OOM-kills the container at startup. Pin CPU wheels.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1+cpu
+
 # ─── Web framework ───────────────────────────
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
