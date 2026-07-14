@@ -10,7 +10,7 @@ from app.core.deps import CurrentUserDep, LLMDep, RagDep, SessionDep
 from app.schemas.chat import Answer, ChatRequest
 from app.services.chat_service import ChatService
 from app.services.conversation_service import ConversationService
-from app.services.enrich import generate_follow_ups
+from app.services.enrich import generate_follow_ups, generate_title
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -97,6 +97,13 @@ async def chat_stream(
         await convo.add_message(conversation, "user", req.question)
         await convo.add_message(conversation, "assistant", acc, citations)
         await session.commit()
+
+        # On the first turn, give the conversation a human title.
+        if req.conversation_id is None:
+            title = await generate_title(llm, req.question)
+            if title:
+                conversation.title = title
+                await session.commit()
 
         follow_ups = await generate_follow_ups(llm, req.question, acc)
         if follow_ups:

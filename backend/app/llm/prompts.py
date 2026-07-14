@@ -47,6 +47,18 @@ _REPO_REDIRECT_RULE = (
 )
 
 
+def build_title_messages(question: str) -> list[LLMMessage]:
+    """Ask the model for a short, human title summarising a conversation's topic."""
+    system = (
+        "Create a very short title (3 to 6 words) summarising the topic of the user's "
+        "message. Return ONLY the title — no quotes, no trailing punctuation, no prefix."
+    )
+    return [
+        LLMMessage(role=Role.SYSTEM, content=system),
+        LLMMessage(role=Role.USER, content=question[:500]),
+    ]
+
+
 def build_follow_up_messages(question: str, answer: str) -> list[LLMMessage]:
     """Ask the model for a few natural follow-up questions a user might ask next."""
     system = (

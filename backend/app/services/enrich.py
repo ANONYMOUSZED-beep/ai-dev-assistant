@@ -12,6 +12,24 @@ if TYPE_CHECKING:
 
 _MAX_FOLLOW_UPS = 3
 _MAX_LEN = 120
+_MAX_TITLE_LEN = 60
+
+
+async def generate_title(llm: BaseLLMProvider, question: str) -> str | None:
+    """Return a short conversation title from the first question, or None on failure."""
+    question = (question or "").strip()
+    if not question:
+        return None
+    try:
+        response = await llm.generate(prompts.build_title_messages(question))
+    except Exception:  # noqa: BLE001 - titling must never break the response
+        return None
+    title = _clean(response.content.strip().splitlines()[0] if response.content else "")
+    if not title:
+        return None
+    if len(title) > _MAX_TITLE_LEN:
+        title = title[: _MAX_TITLE_LEN - 1].rstrip() + "…"
+    return title
 
 
 def _clean(line: str) -> str:
