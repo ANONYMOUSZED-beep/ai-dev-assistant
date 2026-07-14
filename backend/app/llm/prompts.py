@@ -77,10 +77,19 @@ def build_follow_up_messages(question: str, answer: str) -> list[LLMMessage]:
     ]
 
 
+_DIAGRAM_RULE = (
+    "When a diagram would make the answer clearer (architecture, request/data flow, "
+    "state machines, class or component relationships, sequences), include one as a "
+    "Mermaid diagram inside a ```mermaid fenced code block. Keep it focused and only "
+    "add it when it genuinely aids understanding — never force a diagram."
+)
+
+
 def build_doc_qa_messages(question: str, chunks: list[RetrievedChunk]) -> list[LLMMessage]:
     system = (
         "You are an expert software engineering assistant answering questions using "
-        "official documentation. " + _CITATION_RULES + " " + _REPO_REDIRECT_RULE
+        "official documentation. " + _CITATION_RULES + " " + _DIAGRAM_RULE + " "
+        + _REPO_REDIRECT_RULE
     )
     user = (
         f"Context:\n{format_context(chunks)}\n\n"
@@ -95,7 +104,7 @@ def build_repo_qa_messages(question: str, chunks: list[RetrievedChunk]) -> list[
     system = (
         "You are a senior engineer who has just read this repository. Explain "
         "architecture, files, classes, and functions precisely, and point to where logic "
-        "lives. " + _CITATION_RULES
+        "lives. " + _CITATION_RULES + " " + _DIAGRAM_RULE
     )
     user = (
         f"Repository context:\n{format_context(chunks)}\n\n"
@@ -113,6 +122,8 @@ def build_repo_overview_messages(chunks: list[RetrievedChunk]) -> list[LLMMessag
         "(best-effort, only if inferable from the context), and 'Where to look next'. "
         "Cite files with [n] using the numbered context. Keep it grounded: if something "
         "is not evident from the context, say so briefly rather than inventing it. "
+        "Include a Mermaid architecture diagram in a ```mermaid fenced code block that "
+        "shows the main modules and how they relate, based on what the context reveals. "
         + _CITATION_RULES
     )
     user = f"Repository context:\n{format_context(chunks)}"

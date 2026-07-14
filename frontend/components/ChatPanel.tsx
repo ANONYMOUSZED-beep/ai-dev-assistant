@@ -161,6 +161,12 @@ const SLASH_COMMANDS: SlashCommand[] = [
     hint: "Ask for a concrete example",
     template: "Show me a simple example of: ",
   },
+  {
+    cmd: "/diagram",
+    label: "Draw diagram",
+    hint: "Visualize something as a Mermaid diagram",
+    template: "Draw a Mermaid diagram of: ",
+  },
 ];
 
 function QuestionComposer({

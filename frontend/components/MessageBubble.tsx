@@ -1,12 +1,13 @@
 "use client";
 
 import { Bot, Check, Copy, User } from "lucide-react";
-import { useMemo, useState } from "react";
+import { isValidElement, useMemo, useState, type ReactNode } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import type { ChatMessage, Citation } from "@/lib/types";
 import CitationChip from "./CitationChip";
+import MermaidDiagram from "./MermaidDiagram";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -40,6 +41,16 @@ function linkifyCitations(text: string, validIndices: Set<number>): string {
     .join("");
 }
 
+/** Recursively pull the raw text out of a react-markdown code node. */
+function extractCodeText(node: ReactNode): string {
+  if (typeof node === "string") return node;
+  if (Array.isArray(node)) return node.map(extractCodeText).join("");
+  if (isValidElement(node)) {
+    return extractCodeText((node.props as { children?: ReactNode }).children);
+  }
+  return "";
+}
+
 export default function MessageBubble({
   message,
   onSelectCitation,
@@ -70,6 +81,19 @@ export default function MessageBubble({
 
   const components: Components = useMemo(
     () => ({
+      pre({ children, ...props }) {
+        const child = Array.isArray(children) ? children[0] : children;
+        if (isValidElement(child)) {
+          const codeProps = child.props as {
+            className?: string;
+            children?: ReactNode;
+          };
+          if (/\blanguage-mermaid\b/.test(codeProps.className ?? "")) {
+            return <MermaidDiagram code={extractCodeText(codeProps.children)} />;
+          }
+        }
+        return <pre {...props}>{children}</pre>;
+      },
       a({ href, children, ...props }) {
         const match = href?.match(/^#cite-(\d+)$/);
         if (match) {
