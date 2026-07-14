@@ -36,14 +36,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     from app.llm.factory import get_llm_provider
     from app.rag.pipeline import RagPipeline
 
-    try:
-        await init_db()
-    except Exception as exc:  # pragma: no cover - depends on live DB
-        logger.warning("Database initialisation skipped: %s", exc)
-
     # Build engines defensively: a failure here must not crash-loop the whole
     # server (which would leave health checks unanswerable). Log loudly and start
     # in a degraded state so operators can diagnose via logs and /health.
+    # NOTE: engine construction is cheap and touches no network (models load
+    # lazily; the pgvector pool connects on first use), so it is safe to do here.
     try:
         app.state.rag_pipeline = RagPipeline.from_settings(settings)
         app.state.llm_provider = get_llm_provider(settings)
@@ -57,41 +54,52 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.rag_pipeline = None
         app.state.llm_provider = None
 
-    # Warm ML models in the background so the first user request doesn't hit the
-    # platform request timeout (e.g. HF Spaces ~60s) while models download/load.
-    warmup_task: asyncio.Task[None] | None = None
-    if app.state.rag_pipeline is not None:
+    # CRITICAL: everything that touches the network (DB init, model warmup, seeding)
+    # runs in a background task so it can NEVER block uvicorn from binding the port.
+    # A hanging asyncpg connection to a cold/unreachable managed DB here would
+    # otherwise stall the ASGI lifespan "startup" event forever, leaving the Space
+    # stuck in APP_STARTING with the health check unanswerable. Binding first means
+    # /health and / respond immediately and the app self-heals as the DB warms up.
+    async def _startup() -> None:
+        # Idempotent schema create + additive migrations. Bounded so a stalled
+        # connection can't wedge startup; it retries on the next deploy/boot.
+        try:
+            await asyncio.wait_for(init_db(), timeout=30)
+        except Exception as exc:
+            logger.warning("Database initialisation skipped/timed out: %s", exc)
 
-        async def _warmup() -> None:
-            try:
-                logger.info("Warming up ML models in background...")
-                await app.state.rag_pipeline.warmup()
-                logger.info("Model warmup complete")
-            except Exception:
-                logger.exception("Model warmup failed (models will load lazily)")
+        if app.state.rag_pipeline is None:
+            return
 
-            # Seed the default "Getting Started" knowledge base so a first-time user
-            # gets a real, cited answer instead of an empty collection. Idempotent.
-            try:
-                from app.rag.seed import (
-                    GETTING_STARTED_COLLECTION,
-                    getting_started_documents,
-                )
+        try:
+            logger.info("Warming up ML models in background...")
+            await app.state.rag_pipeline.warmup()
+            logger.info("Model warmup complete")
+        except Exception:
+            logger.exception("Model warmup failed (models will load lazily)")
 
-                seeded = await app.state.rag_pipeline.seed_if_empty(
-                    GETTING_STARTED_COLLECTION, getting_started_documents()
-                )
-                if seeded:
-                    logger.info("Seeded Getting Started knowledge base (%d chunks)", seeded)
-            except Exception:
-                logger.exception("Getting Started seeding failed (non-fatal)")
+        # Seed the default "Getting Started" knowledge base so a first-time user
+        # gets a real, cited answer instead of an empty collection. Idempotent.
+        try:
+            from app.rag.seed import (
+                GETTING_STARTED_COLLECTION,
+                getting_started_documents,
+            )
 
-        warmup_task = asyncio.create_task(_warmup())
+            seeded = await app.state.rag_pipeline.seed_if_empty(
+                GETTING_STARTED_COLLECTION, getting_started_documents()
+            )
+            if seeded:
+                logger.info("Seeded Getting Started knowledge base (%d chunks)", seeded)
+        except Exception:
+            logger.exception("Getting Started seeding failed (non-fatal)")
+
+    warmup_task: asyncio.Task[None] = asyncio.create_task(_startup())
 
     try:
         yield
     finally:
-        if warmup_task is not None and not warmup_task.done():
+        if not warmup_task.done():
             warmup_task.cancel()
         await dispose_db()
         from app.cache.redis import close_redis
