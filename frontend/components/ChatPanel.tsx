@@ -119,6 +119,50 @@ const SUGGESTIONS: Record<ChatMode, string[]> = {
   pair: [],
 };
 
+// Slash commands: typing "/" at the start of the composer reveals a small menu
+// of prompt templates. Picking one replaces the "/command" token with a
+// plain-language prefix, so non-technical users get a well-shaped question
+// without learning any syntax. Purely client-side prompt shaping — no new API.
+interface SlashCommand {
+  cmd: string;
+  label: string;
+  hint: string;
+  template: string;
+}
+
+const SLASH_COMMANDS: SlashCommand[] = [
+  {
+    cmd: "/explain",
+    label: "Explain",
+    hint: "Explain something in simple terms",
+    template: "Explain this in simple terms: ",
+  },
+  {
+    cmd: "/test",
+    label: "Write tests",
+    hint: "Suggest tests for some code or behaviour",
+    template: "Write tests for the following: ",
+  },
+  {
+    cmd: "/summarize",
+    label: "Summarize",
+    hint: "Give a short summary",
+    template: "Give me a short summary of: ",
+  },
+  {
+    cmd: "/steps",
+    label: "How-to steps",
+    hint: "Break something into clear steps",
+    template: "Walk me through the steps to: ",
+  },
+  {
+    cmd: "/example",
+    label: "Show example",
+    hint: "Ask for a concrete example",
+    template: "Show me a simple example of: ",
+  },
+];
+
 function QuestionComposer({
   busy,
   disabled,
@@ -131,20 +175,99 @@ function QuestionComposer({
   onSend: (value: string) => void;
 }) {
   const [value, setValue] = useState("");
+  const [activeIdx, setActiveIdx] = useState(0);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Show the slash menu only while the user is typing a leading "/token" with no
+  // space yet (i.e. still choosing a command).
+  const slashQuery =
+    value.startsWith("/") && !value.includes(" ") ? value.toLowerCase() : null;
+  const matches =
+    slashQuery === null
+      ? []
+      : SLASH_COMMANDS.filter((c) => c.cmd.startsWith(slashQuery));
+  const menuOpen = matches.length > 0;
+
+  const applyCommand = (command: SlashCommand) => {
+    setValue(command.template);
+    setActiveIdx(0);
+    // Return focus and place caret at the end for immediate typing.
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (el) {
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+      }
+    });
+  };
 
   const send = () => {
     const trimmed = value.trim();
     if (!trimmed || busy || disabled) return;
     onSend(trimmed);
     setValue("");
+    setActiveIdx(0);
   };
 
   return (
-    <div className="flex flex-wrap items-end gap-2 p-2 sm:p-3">
+    <div className="relative flex flex-wrap items-end gap-2 p-2 sm:p-3">
+      {menuOpen ? (
+        <ul
+          role="listbox"
+          aria-label="Slash commands"
+          className="absolute bottom-full left-2 z-30 mb-1 w-64 overflow-hidden rounded-md border border-ide-border bg-ide-panel shadow-lg"
+        >
+          {matches.map((c, i) => (
+            <li key={c.cmd}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={i === activeIdx}
+                onMouseEnter={() => setActiveIdx(i)}
+                onClick={() => applyCommand(c)}
+                className={`flex w-full flex-col items-start gap-0.5 px-3 py-1.5 text-left ${
+                  i === activeIdx ? "bg-ide-accent/10" : "hover:bg-ide-hover"
+                }`}
+              >
+                <span className="text-xs font-medium text-ide-text">
+                  <span className="text-ide-accent">{c.cmd}</span> · {c.label}
+                </span>
+                <span className="text-[0.68rem] text-ide-muted">{c.hint}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <textarea
+        ref={textareaRef}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => {
+          setValue(e.target.value);
+          setActiveIdx(0);
+        }}
         onKeyDown={(e) => {
+          if (menuOpen) {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setActiveIdx((i) => (i + 1) % matches.length);
+              return;
+            }
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setActiveIdx((i) => (i - 1 + matches.length) % matches.length);
+              return;
+            }
+            if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) {
+              e.preventDefault();
+              applyCommand(matches[activeIdx]);
+              return;
+            }
+            if (e.key === "Escape") {
+              e.preventDefault();
+              setValue("");
+              return;
+            }
+          }
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             send();
