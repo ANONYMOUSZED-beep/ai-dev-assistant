@@ -4,7 +4,7 @@
 # NVIDIA CUDA stack (cuda-toolkit, cudnn, nccl, triton ...). That balloons the
 # image by several GB and OOM-kills the container at startup. Pin CPU wheels.
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.5.1+cpu
+torch==2.12.1+cpu
 
 # ─── Web framework ───────────────────────────
 fastapi==0.115.6
