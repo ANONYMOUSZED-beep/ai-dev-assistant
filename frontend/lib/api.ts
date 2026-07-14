@@ -469,10 +469,16 @@ export interface AuthToken {
 export interface CurrentUser {
   id: string;
   username: string;
+  is_guest?: boolean;
 }
 
 export function register(username: string, password: string): Promise<AuthToken> {
   return request<AuthToken>("/auth/register", jsonBody({ username, password }));
+}
+
+/** Mint a throwaway guest account for trying the app without signing up. */
+export function guestLogin(): Promise<AuthToken> {
+  return request<AuthToken>("/auth/guest", { method: "POST" });
 }
 
 export function login(username: string, password: string): Promise<AuthToken> {

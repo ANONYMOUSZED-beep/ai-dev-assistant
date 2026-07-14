@@ -20,7 +20,7 @@ from app.api.v1 import (
     search,
     share,
 )
-from app.core.deps import get_current_user
+from app.core.deps import forbid_guest, get_current_user
 from app.core.security import enforce_rate_limit
 
 api_router = APIRouter()
@@ -32,5 +32,10 @@ api_router.include_router(share.router)
 
 # Protected: require a valid JWT and apply rate limiting.
 _guarded = [Depends(get_current_user), Depends(enforce_rate_limit)]
-for feature in (chat, conversations, documents, repositories, search, debug, pair):
+for feature in (chat, conversations, search, debug, pair):
     api_router.include_router(feature.router, dependencies=_guarded)
+
+# Also block guest (demo) accounts: these write to the shared vector store.
+_guarded_no_guest = [*_guarded, Depends(forbid_guest)]
+for feature in (documents, repositories):
+    api_router.include_router(feature.router, dependencies=_guarded_no_guest)

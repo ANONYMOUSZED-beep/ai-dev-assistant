@@ -74,25 +74,65 @@ async def _hit_within_window(client, key: str, limit: int, window_seconds: int) 
     return count <= limit
 
 
+async def _within_limit(settings, key: str, limit: int, window_seconds: int) -> bool:
+    """Fixed-window check backed by Redis, degrading to the in-memory limiter."""
+    try:
+        client = get_redis(settings)
+        return await _hit_within_window(client, key, limit, window_seconds)
+    except Exception as exc:  # noqa: BLE001 - never fail a request on cache errors
+        logger.warning("Redis unavailable; using in-memory rate limiter: %s", exc)
+        return _memory_limiter.hit(key, limit, window_seconds)
+
+
+def _is_guest_request(request: Request) -> bool:
+    """True when the bearer token carries a guest claim (best-effort, no raise)."""
+    from app.core.auth import token_is_guest
+
+    auth = request.headers.get("authorization", "")
+    scheme, _, token = auth.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        return False
+    return token_is_guest(token.strip())
+
+
 async def enforce_rate_limit(request: Request, settings: SettingsDep) -> None:
-    """Apply a per-minute fixed-window rate limit; degrade open if Redis is down."""
-    limit = settings.rate_limit_per_minute
+    """Apply a per-minute fixed-window rate limit; degrade open if Redis is down.
+
+    Guest (demo) tokens get a tighter cap so throwaway accounts can't drive up
+    paid-LLM/embedding cost as freely as registered users.
+    """
+    if _is_guest_request(request):
+        limit = settings.guest_rate_limit_per_minute
+    else:
+        limit = settings.rate_limit_per_minute
     if limit <= 0:
         return
 
     identifier = _client_identifier(request)
     key = f"ratelimit:{identifier}"
-    try:
-        client = get_redis(settings)
-        within = await _hit_within_window(client, key, limit, window_seconds=60)
-    except Exception as exc:  # noqa: BLE001 - never fail a request on cache errors
-        # Redis is down: fall back to a process-local limiter so we still cap abuse
-        # instead of degrading fully open.
-        logger.warning("Redis unavailable; using in-memory rate limiter: %s", exc)
-        within = _memory_limiter.hit(key, limit, window_seconds=60)
-
-    if not within:
+    if not await _within_limit(settings, key, limit, window_seconds=60):
         raise RateLimitError(
             "Rate limit exceeded. Please slow down and try again shortly.",
             details={"limit_per_minute": limit},
+        )
+
+
+async def enforce_guest_creation_limit(request: Request, settings: SettingsDep) -> None:
+    """Cap how many guest accounts a single IP can mint per hour.
+
+    Guest creation is unauthenticated, so without this a script could farm
+    unlimited guest tokens (each of which would otherwise get its own chat quota).
+    """
+    limit = settings.guest_creations_per_hour
+    if limit <= 0:
+        return
+
+    client = request.client
+    ip = client.host if client else "anonymous"
+    key = f"guestcreate:ip:{ip}"
+    if not await _within_limit(settings, key, limit, window_seconds=3600):
+        raise RateLimitError(
+            "Too many demo sessions from this network. Please try again later, "
+            "or create a free account.",
+            details={"limit_per_hour": limit},
         )

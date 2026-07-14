@@ -50,6 +50,18 @@ async def get_current_user(
     return user
 
 
+def forbid_guest(user: CurrentUserDep) -> None:
+    """Reject guest (demo) accounts on routes that write to shared state.
+
+    Guests are read-only against the seeded knowledge base; ingestion and repository
+    indexing write into the shared vector store, so they must require a real account.
+    """
+    from app.core.exceptions import AuthError
+
+    if getattr(user, "is_guest", False):
+        raise AuthError("Create a free account to use this feature.")
+
+
 def get_rag_pipeline(request: Request) -> RagPipeline:
     """Return the shared RAG pipeline created at startup."""
     return request.app.state.rag_pipeline

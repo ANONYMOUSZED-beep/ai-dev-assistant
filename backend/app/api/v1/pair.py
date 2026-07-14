@@ -90,12 +90,14 @@ async def pair_stream(
         await convo.add_message(conversation, "assistant", acc, citations)
         await session.commit()
 
-        follow_ups = await generate_follow_ups(llm, f"{req.action} this code", acc)
-        if follow_ups:
-            yield {
-                "event": "followups",
-                "data": orjson.dumps(follow_ups).decode(),
-            }
+        # Follow-ups are an extra LLM call; skip for guests to cap demo cost.
+        if not current_user.is_guest:
+            follow_ups = await generate_follow_ups(llm, f"{req.action} this code", acc)
+            if follow_ups:
+                yield {
+                    "event": "followups",
+                    "data": orjson.dumps(follow_ups).decode(),
+                }
         yield {"event": "done", "data": ""}
 
     return EventSourceResponse(event_generator())

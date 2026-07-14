@@ -4,7 +4,7 @@ import { ListTree } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import ActivityBar from "@/components/ActivityBar";
-import AuthGate from "@/components/AuthGate";
+import AuthGate, { useAuth } from "@/components/AuthGate";
 import ChatPanel from "@/components/ChatPanel";
 import CitationsList from "@/components/CitationsList";
 import CommandPalette from "@/components/CommandPalette";
@@ -14,6 +14,7 @@ import TopBar from "@/components/TopBar";
 import WelcomeGuide from "@/components/WelcomeGuide";
 import { useChat } from "@/hooks/useChat";
 import {
+  clearToken,
   createRepository,
   deleteConversation,
   deleteRepository,
@@ -42,6 +43,7 @@ import type {
 const TERMINAL: IndexStatus[] = ["ready", "failed"];
 
 function Workspace() {
+  const { user } = useAuth();
   const [mode, setMode] = useState<ChatMode>("docs");
   const [collection, setCollection] = useState("getting-started");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -411,6 +413,27 @@ function Workspace() {
         onToggleRight={handleToggleRight}
         onOpenGuide={() => setGuideOpen(true)}
       />
+
+      {user?.is_guest ? (
+        <div className="flex items-center justify-center gap-1.5 border-b border-ide-accent/30 bg-ide-accent/10 px-3 py-1.5 text-center text-xs text-ide-text">
+          <span>
+            {
+              "You're in demo mode — chats aren't saved and some features are limited."
+            }
+          </span>
+          <a
+            href="/app"
+            onClick={(e) => {
+              e.preventDefault();
+              clearToken();
+              window.location.reload();
+            }}
+            className="font-semibold text-ide-accent underline underline-offset-2 hover:opacity-80"
+          >
+            Sign up to save your work
+          </a>
+        </div>
+      ) : null}
 
       <div className="app-grid flex min-h-0 flex-1 gap-3 px-3 pb-3">
         {/* Mode rail */}

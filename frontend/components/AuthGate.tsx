@@ -16,6 +16,7 @@ import {
   fetchMe,
   getToken,
   GOOGLE_CLIENT_ID,
+  guestLogin,
   login,
   register,
   setToken,
@@ -123,6 +124,21 @@ function AuthScreen({
     }
   };
 
+  const continueAsGuest = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await guestLogin();
+      setToken(res.access_token);
+      const me = await fetchMe();
+      onAuthenticated(me);
+    } catch (err) {
+      setError(humanizeError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#eef0f2] px-4">
       <div className="w-full max-w-sm rounded-2xl border border-[#e0e4ea] bg-white p-8 shadow-[0_20px_60px_rgba(30,50,90,0.08)]">
@@ -219,6 +235,18 @@ function AuthScreen({
             />
           </>
         ) : null}
+
+        <button
+          type="button"
+          onClick={continueAsGuest}
+          disabled={busy}
+          className="mt-3 w-full rounded-lg border border-[#d8dce2] bg-white px-4 py-2.5 text-sm font-medium text-[#1e325a] transition-colors hover:bg-[#f4f6f9] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Continue as guest
+        </button>
+        <p className="mt-1.5 text-center text-[0.7rem] text-[#8a91a0]">
+          {"Try it instantly — no account needed. Some features are limited."}
+        </p>
 
         <button
           type="button"

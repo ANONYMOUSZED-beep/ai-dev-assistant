@@ -29,3 +29,4 @@ class TokenResponse(BaseModel):
 class UserResponse(BaseModel):
     id: str
     username: str
+    is_guest: bool = False

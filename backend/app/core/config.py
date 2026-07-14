@@ -72,6 +72,10 @@ class Settings(BaseSettings):
         return [item.strip() for item in text.split(",") if item.strip()]
     # Fixed-window request cap per client, per minute. 0 disables rate limiting.
     rate_limit_per_minute: int = 60
+    # Guest (demo) limits: tighter per-minute chat cap for throwaway accounts, and a
+    # per-IP hourly cap on minting new guests to blunt token-farming abuse.
+    guest_rate_limit_per_minute: int = 20
+    guest_creations_per_hour: int = 15
 
     # ── Auth (JWT) ───────────────────────────────────────────────
     # Secret used to sign JWTs. MUST be set to a long random value in production.

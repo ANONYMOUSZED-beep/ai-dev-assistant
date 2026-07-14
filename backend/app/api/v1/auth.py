@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import re
+import uuid
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +20,7 @@ from app.core.auth import (
 from app.core.deps import CurrentUserDep, RagDep, SessionDep
 from app.core.exceptions import AuthError, ValidationError
 from app.core.logging import get_logger
+from app.core.security import enforce_guest_creation_limit
 from app.db.models import Conversation, Message, Repository, User
 from app.schemas.auth import (
     GoogleLoginRequest,
@@ -111,10 +113,35 @@ async def google_login(req: GoogleLoginRequest, session: SessionDep) -> TokenRes
     return TokenResponse(access_token=create_access_token(user.id), username=user.username)
 
 
+@router.post(
+    "/guest",
+    response_model=TokenResponse,
+    status_code=201,
+    dependencies=[Depends(enforce_guest_creation_limit)],
+)
+async def guest(session: SessionDep) -> TokenResponse:
+    """Mint a throwaway demo account for trying the app without signing up.
+
+    The account has no password (can't be logged into) and is flagged ``is_guest``
+    so downstream routes can keep it read-only against the shared knowledge base.
+    """
+    username = f"guest_{uuid.uuid4().hex[:12]}"
+    user = User(username=username, password_hash=None, is_guest=True)
+    session.add(user)
+    await session.commit()
+
+    token = create_access_token(user.id, guest=True)
+    return TokenResponse(access_token=token, username=user.username)
+
+
 @router.get("/me", response_model=UserResponse)
 async def me(current_user: CurrentUserDep) -> UserResponse:
     """Return the authenticated user."""
-    return UserResponse(id=current_user.id, username=current_user.username)
+    return UserResponse(
+        id=current_user.id,
+        username=current_user.username,
+        is_guest=current_user.is_guest,
+    )
 
 
 @router.get("/me/export")

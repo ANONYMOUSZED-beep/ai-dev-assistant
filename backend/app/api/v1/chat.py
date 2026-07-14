@@ -90,13 +90,6 @@ async def chat_stream(
             acc += token
             yield {"event": "token", "data": token}
 
-        if acc:
-            try:
-                follow_ups = await service.follow_ups(req.question, acc)
-            except Exception:  # noqa: BLE001 - best-effort, never break the stream
-                follow_ups = []
-            yield {"event": "followups", "data": orjson.dumps(follow_ups).decode()}
-
         # Persist the completed turn.
         await convo.add_message(conversation, "user", req.question)
         await convo.add_message(conversation, "assistant", acc, citations)
@@ -109,12 +102,14 @@ async def chat_stream(
                 conversation.title = title
                 await session.commit()
 
-        follow_ups = await generate_follow_ups(llm, req.question, acc)
-        if follow_ups:
-            yield {
-                "event": "followups",
-                "data": orjson.dumps(follow_ups).decode(),
-            }
+        # Follow-ups are an extra LLM call; skip for guests to cap demo cost.
+        if acc and not current_user.is_guest:
+            follow_ups = await generate_follow_ups(llm, req.question, acc)
+            if follow_ups:
+                yield {
+                    "event": "followups",
+                    "data": orjson.dumps(follow_ups).decode(),
+                }
 
         yield {"event": "done", "data": ""}
 

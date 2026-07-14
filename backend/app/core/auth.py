@@ -31,7 +31,7 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
-def create_access_token(subject: str) -> str:
+def create_access_token(subject: str, *, guest: bool = False) -> str:
     """Create a signed JWT whose ``sub`` claim is the user id."""
     settings = get_settings()
     now = datetime.now(UTC)
@@ -42,6 +42,8 @@ def create_access_token(subject: str) -> str:
             (now + timedelta(minutes=settings.access_token_expire_minutes)).timestamp()
         ),
     }
+    if guest:
+        payload["guest"] = True
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
@@ -56,6 +58,18 @@ def decode_token(token: str) -> str | None:
         return None
     subject = payload.get("sub")
     return subject if isinstance(subject, str) else None
+
+
+def token_is_guest(token: str) -> bool:
+    """Return True if the token is valid and carries a guest claim."""
+    settings = get_settings()
+    try:
+        payload = jwt.decode(
+            token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
+        )
+    except jwt.PyJWTError:
+        return False
+    return payload.get("guest") is True
 
 
 # ── Google Sign-In ───────────────────────────────────────────────
